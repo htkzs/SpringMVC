@@ -1,0 +1,52 @@
+<!DOCTYPE web-app PUBLIC
+ "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+ "http://java.sun.com/dtd/web-app_2_3.dtd" >
+
+<web-app>
+  <display-name>Archetype Created Web Application</display-name>
+
+  <!--指定spring配置文件的位置 当Servlet启动时保证SpringIOC也随之启动-->
+  <context-param>
+    <param-name>contextConfigLocation</param-name>
+    <param-value>classpath:application.xml</param-value>
+  </context-param>
+  <!--配置Spring的父容器 在servlet启动时监听创建SpringIOC容器，而在servlet关闭后销毁Spring容器-->
+  <listener>
+    <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+  </listener>
+
+  <!--指定springMVC的配置文件-->
+  <servlet>
+    <servlet-name>springmvc</servlet-name>
+    <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+    <!--指定SpringMVC配置文件的位置 如果不写init-param 则莫认在WEB-INF/springmvc-servlet.xml-->
+    <init-param>
+      <param-name>contextConfigLocation</param-name>
+      <param-value>classpath:application.xml</param-value>
+    </init-param>
+    <!--servlet启动加载，默认第一次访问创建，现在改为servlet容器时创建对象-->
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>springmvc</servlet-name>
+    <!--/*和/都是拦截所有请求;
+    /。会拦截所有请求，但是不会拦截*.jsp;能保证jsp访间正常;/*的范围更大。还会拦截到*.jsp这些请求:一但拦截jsp页面就不能显示了;-->
+    <url-pattern>/</url-pattern>
+  </servlet-mapping>
+  <filter>
+    <filter-name>HiddenHttpMethodFilter</filter-name>
+    <filter-class>org.springframework.web.filter.HiddenHttpMethodFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>HiddenHttpMethodFilter</filter-name>
+    <!--注意过滤器这里的配置-->
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+  <welcome-file-list>
+    <welcome-file>index.html</welcome-file>
+    <welcome-file>index.htm</welcome-file>
+    <welcome-file>index.jsp</welcome-file>
+    <welcome-file>default.html</welcome-file>
+    <welcome-file>default.jsp</welcome-file>
+  </welcome-file-list>
+</web-app>

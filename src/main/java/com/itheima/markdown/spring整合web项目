@@ -1,0 +1,111 @@
+1.导入依赖 以SpringIOC的依赖包为基础加入Spring整合web的监听器包和SpringMVC的依赖包webmvc
+ <!--spring整合web的监听器-->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <version>5.2.5.RELEASE</version>
+        </dependency>
+        <!--springMVC相关的依赖-->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <version>5.2.5.RELEASE</version>
+        </dependency>
+
+
+ Spring整合web详解
+ ioc容器创建和销毁都要在合适的时机完成;
+ 保证servlet启动后SpringIOC容器也随之启动，当Servlet容器销毁后SpringIOC也必须随之销毁
+ 可以使用Spring的监听器
+ Spring实现了一个监听器  org.springframework.web.context.ContextLoaderListener
+
+ public class ContextLoaderListener extends ContextLoader implements ServletContextListener {
+     public ContextLoaderListener() {
+     }
+
+     public ContextLoaderListener(WebApplicationContext context) {
+         super(context);
+     }
+     //创建SpringIOC容器
+     public void contextInitialized(ServletContextEvent event) {
+         this.initWebApplicationContext(event.getServletContext());
+     }
+     //销毁SpringIOC容器
+     public void contextDestroyed(ServletContextEvent event) {
+         this.closeWebApplicationContext(event.getServletContext());
+         ContextCleanupListener.cleanupAttributes(event.getServletContext());
+     }
+ }
+ 进入initWebApplicationContext(event.getServletContext())
+ public class ContextLoader {
+     private WebApplicationContext context;
+     public WebApplicationContext initWebApplicationContext(ServletContext servletContext) {
+             if (servletContext.getAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE) != null) {
+                 throw new IllegalStateException("Cannot initialize context because there is already a root application context present - check whether you have multiple ContextLoader* definitions in your web.xml!");
+             } else {
+                 servletContext.log("Initializing Spring root WebApplicationContext");
+                 Log logger = LogFactory.getLog(ContextLoader.class);
+                 if (logger.isInfoEnabled()) {
+                     logger.info("Root WebApplicationContext: initialization started");
+                 }
+
+                 long startTime = System.currentTimeMillis();
+
+                 try {
+                     if (this.context == null) {
+                         //创建SpringIOC容器并赋值给 属性WebApplicationContext context
+                         this.context = this.createWebApplicationContext(servletContext);
+                     }
+ }
+而WebApplicationContext     WebApplicationContext extends ApplicationContext实质就是Spring的IOC容器
+这里相当于将SpringIOC放入servlet容器的一个属性当中。
+ 2.配置
+    <!--指定spring配置文件的位置 当Servlet启动时保证SpringIOC也随之启动-->
+    <context-param>
+      <param-name>contextConfigLocation</param-name>
+      <param-value>classpath:application.xml</param-value>
+    </context-param>
+    <!--配置Spring的父容器 在servlet启动时监听创建SpringIOC容器，而在servlet关闭后销毁Spring容器-->
+    <listener>
+      <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+    </listener>
+
+SpringMVC相关配置
+ 配置dispatcherServlet处理器
+    <!--指定springMVC的配置文件-->
+      <servlet>
+        <servlet-name>springmvc</servlet-name>
+        <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+        <!--指定SpringMVC配置文件的位置 如果不写init-param 则莫认在WEB-INF/springmvc-servlet.xml-->
+        <init-param>
+          <param-name>contextConfigLocation</param-name>
+          <param-value>classpath:application.xml</param-value>
+        </init-param>
+        <!--servlet启动加载，默认第一次访问创建，现在改为servlet容器时创建对象-->
+        <load-on-startup>1</load-on-startup>
+      </servlet>
+      <servlet-mapping>
+        <servlet-name>springmvc</servlet-name>
+        <!--/*和/都是拦截所有请求;
+        /。会拦截所有请求，但是不会拦截*.jsp;能保证jsp访间正常;/*的范围更大。还会拦截到*.jsp这些请求:一但拦截jsp页面就不能显示了;-->
+        <url-pattern>/</url-pattern>
+      </servlet-mapping>
+
+注意上述配置中如果没有在 <init-param>标签中致电给SpringMVC的配置文件的位置，将会默认在 WEB-INF/springmvc-servlet.xml找SpringMVC
+的配置文件 springmvc-servlet这个名称是如何来的呢？springmvc就是我们上述配置的servlet-name
+
+关于<url-pattern>中配置/ 和/* 的区别：
+/ 拦截所有请求，不拦截jsp页面，*.jsp
+请求/* 拦截所有请求，拦截jsp页面，*.jsp请求处理
+
+*.jsp是tomcat做的事; 所有项目的小web.xml都是继承于大web.xml(tomcat/conf/web.xml)
+DefaultServlet是Tomcat中处理静态资源的
+index.html 是静态资源,tomcat就会在服务器下找到这个资源并返回;
+我们前端控制器的 / 禁用了tomcat服务器中的DefaultServlet被禁用(相当于子类重写父类导致父类被禁用)
+1）服务器的大web.xml中有一个DefaultServlet是url-pattern=/
+2)我们的配置中前端控制器url-pattern=/
+静态资源会来到DispatcherServlet(前端控制器）看那个方法的RequestMapping是这个index.html，此时并没有，所以不能访问
+3)为什么jsp又能访问;因为我们没有覆盖报务器中的JspServlet的配置
+/* 就是拦截所有请求
+
+如果配置*.action 拦截以.action结尾的请求

@@ -1,0 +1,105 @@
+@RequestMapping的使用，配置文件中的路径 /表示当前项目中找
+name:
+value:指定匹配的url
+path：
+method：指定请求的方式 POST GET   @RequestMapping(value = "/index",method = RequestMethod.GET) 不设置莫认接受所有的请求
+        不是规定的方式报错:4X×:都是客户端错误
+        405 - Request method 'GET' not supported
+params: 规定请求的参数
+        param1:表示请求必须包含名为param1的请求参数
+        eg:params={"username"}:
+        发送请求的时候必须带上一个名为username的参数;没带都会404
+        ! param1:表示请求不能包含名为param1的请求参数
+        eg:params={" ! username"}
+        发送请求的时候必须不携带上一个名为username的参数。带了就会404
+        eg:params={"username!=123"} username有的时候必须为123，也可以没有
+headers：规定请求头，可以规定那些浏览器可以访问，那些浏览器不可以访问。
+         User-Agent
+         @RequestMapping(value = "/index",method = RequestMethod.GET,headers = {"User-Agent= "})
+
+consumes:只接受内容类型是哪种的请求，规定请求头中的Content-Type
+
+produces：告诉浏览器返回的内容类型是什么，给响应头中加上Content-Type :text/ html; charset=utf-8
+
+RequestMapping的模糊匹配
+URL地址可以写模糊的通配符,
+? 能替代任意一个字符 0个或多个都不可以 模糊和精确多个匹配下精确优先
+* 能替代任意多个字符,和一层路径  0个或多个字符都可以
+** 能替代多层路径
+
+
+@PathVariable(""):获取路径上的占位符信息。
+
+Rest :系统希望以非常简洁的URL地址来发请求;怎样表示对一个资源的增删改查用请求方式来区分  简洁的URL提交请求，以请求方式区分对资源操作;
+
+/getBook?id=1 :查询图书
+/deleteBook?id=1:删除1号图书
+/updateBook?id=1:更新1号图书
+/addBook:添加图书
+
+Rest推荐;
+url地址这么起名;/资源名/资源标识符
+/book/1 :GET-----查询1号图书
+/book/1 :PUT------更新1号图书
+/book/1 :DELETE-----删除1号图书
+/book   :POST-----添加图书I
+问题:从页面上只能发起两种请求，GET、POST ; 其他的请求方式没法使用;
+1) . SpringMVC中有一个Filter，他可以把普通的请求转化为规定形式的请求，配置这个filter;
+配置一个filter
+  <filter>
+    <filter-name>HiddenHttpMethodFilter</filter-name>
+    <filter-class>org.springframework.web.filter.HiddenHttpMethodFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>HiddenHttpMethodFilter</filter-name>
+    <!--注意过滤器这里的配置-->
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+2.源码分析
+public class HiddenHttpMethodFilter extends OncePerRequestFilter {
+    private static final List<String> ALLOWED_METHODS;
+    public static final String DEFAULT_METHOD_PARAM = "_method";
+    private String methodParam = "_method";
+
+    public HiddenHttpMethodFilter() {
+    }
+
+    public void setMethodParam(String methodParam) {
+        Assert.hasText(methodParam, "'methodParam' must not be empty");
+        this.methodParam = methodParam;
+    }
+
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        HttpServletRequest requestToUse = request;
+        if ("POST".equals(request.getMethod()) && request.getAttribute("javax.servlet.error.exception") == null) {
+            //获取表单的_method的值
+            String paramValue = request.getParameter(this.methodParam);
+            if (StringUtils.hasLength(paramValue)) {
+                //转化为大写的 DELETE PUT
+                String method = paramValue.toUpperCase(Locale.ENGLISH);
+                //重写request。getMethod();
+                if (ALLOWED_METHODS.contains(method)) {
+                    requestToUse = new HiddenHttpMethodFilter.HttpMethodRequestWrapper(request, method);
+                }
+            }
+        }
+        //直接放行
+        filterChain.doFilter((ServletRequest)requestToUse, response);
+    }
+
+    @RequestParam 想当于原生的request.getParameter()
+    value:
+    required：是否必须
+    defaultValue: 默认值
+
+    @RequestHandler:获取请求头的值 想当于原生的request.getHeader()
+    value:
+    required：是否必须
+    defaultValue: 默认值
+
+    @CookieValue
+    value:
+    required：是否必须
+    defaultValue: 默认值
+
+
