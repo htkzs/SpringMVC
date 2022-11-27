@@ -3,3 +3,6 @@
 解决办法就是增加一个配置 在JSP页面头文件增加 isErrorPage="true"
 <%@ page contentType="text/html;charset=UTF-8" language="java" pageEncoding="UTF-8" isErrorPage="true" %>
 
+![img_2.png](img_2.png)
+@ModelAttribute原理
+![img_3.png](img_3.png)

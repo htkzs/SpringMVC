@@ -10,6 +10,36 @@
     <param-name>contextConfigLocation</param-name>
     <param-value>classpath:application.xml</param-value>
   </context-param>
+  <!--SpringMVC中用于解决Post请求乱码的问题-->
+  <filter>
+    <filter-name>CharacterEncodingFilter</filter-name>
+    <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+    <!--encoding 拟定解决POST请求乱码-->
+    <init-param>
+      <param-name>encoding</param-name>
+      <param-value>UTF-8</param-value>
+    </init-param>
+    <!--顺手解决响应乱码 相当于response.setContentType("text/html,charset=utf-8")-->
+    <init-param>
+      <param-name>forceEncoding</param-name>
+      <param-value>true</param-value>
+    </init-param>
+  </filter>
+  <filter-mapping>
+    <filter-name>CharacterEncodingFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+
+  <!--使用POST请求模拟PUT和DELETE请求-->
+  <filter>
+    <filter-name>HiddenHttpMethodFilter</filter-name>
+    <filter-class>org.springframework.web.filter.HiddenHttpMethodFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>HiddenHttpMethodFilter</filter-name>
+    <!--注意过滤器这里的配置-->
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
   <!--配置Spring的父容器 在servlet启动时监听创建SpringIOC容器，而在servlet关闭后销毁Spring容器-->
   <listener>
     <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
@@ -33,15 +63,7 @@
     /。会拦截所有请求，但是不会拦截*.jsp;能保证jsp访间正常;/*的范围更大。还会拦截到*.jsp这些请求:一但拦截jsp页面就不能显示了;-->
     <url-pattern>/</url-pattern>
   </servlet-mapping>
-  <filter>
-    <filter-name>HiddenHttpMethodFilter</filter-name>
-    <filter-class>org.springframework.web.filter.HiddenHttpMethodFilter</filter-class>
-  </filter>
-  <filter-mapping>
-    <filter-name>HiddenHttpMethodFilter</filter-name>
-    <!--注意过滤器这里的配置-->
-    <url-pattern>/*</url-pattern>
-  </filter-mapping>
+
   <welcome-file-list>
     <welcome-file>index.html</welcome-file>
     <welcome-file>index.htm</welcome-file>

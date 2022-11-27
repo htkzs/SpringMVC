@@ -102,4 +102,170 @@ public class HiddenHttpMethodFilter extends OncePerRequestFilter {
     required：是否必须
     defaultValue: 默认值
 
+    上面注解的代码演示：
+    @Controller
+    public class AnnotationController {
+        /*
+         * @Author GhostGalaxy
+         * @Description 请求路径为：http://localhost:8080/request?userId=123 测试结果获取到的参数userId值为123
+         * @Date 19:10:16 2022/11/27
+         * @Param [userId]
+         * @return java.lang.String
+         **/
+        @RequestMapping("/request")
+        public String requestParam(@RequestParam("userId") String userId){
+            System.out.println("获取到的参数userId值为"+userId);
+            return "success";
+        }
+        /*
+         * @Author GhostGalaxy
+         * @Description 获取请求头当中的属性 http://localhost:8080/header
+         * 测试结果:获取到请求头的参数userAgent值为Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36
+         * @Date 19:12:29 2022/11/27
+         * @Param [userAgent]
+         * @return java.lang.String
+         **/
+        @RequestMapping("/header")
+        public String requestHeader(@RequestHeader("User-Agent") String userAgent){
+            System.out.println("获取到请求头的参数userAgent值为"+userAgent);
+            return "success";
+        }
+        /*
+         * @Author GhostGalaxy
+         * @Description   获取JESSIONID的值 测试路径为 http://localhost:8080/cookie  原生javaWeb方式获取到的cookie是多个值，需要遍历
+         * @Date 19:08:23 2022/11/27
+         * @Param [JESSIONID]
+         * @return java.lang.String
+         **/
+        @RequestMapping("/cookie")
+        public String cookieRequest(@CookieValue(value="JSESSIONID",required = false) String JSESSIONID){
+            System.out.println("获取到请求头的参数userAgent值为"+JSESSIONID);
+            return "success";
+        }
+    }
 
+    SpringMVC解决乱码问题
+    请求乱码:
+    GET：在tomcat的server.xml  修改：<Connector connectionTimeout="20000" port="8080" protocol="HTTP/1.1" redirectPort="8443" URIEncoding="UTF-8"/>
+    POST: 在第一次获取请求之前设置 request.setCharacterEncoding("UTF-8")
+          springMVC中不能设置，通过一个过滤器解决
+          1.web.xml中配置
+         <!--SpringMVC中用于解决Post请求乱码的问题-->
+           <filter>
+             <filter-name>CharacterEncodingFilter</filter-name>
+             <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+             <!--encoding 拟定解决POST请求乱码-->
+             <init-param>
+               <param-name>encoding</param-name>
+               <param-value>UTF-8</param-value>
+             </init-param>
+             <!--顺手解决响应乱码 相当于response.setContentType("text/html,charset=utf-8")-->
+             <init-param>
+               <param-name>forceEncoding</param-name>
+               <param-value>true</param-value>
+             </init-param>
+           </filter>
+           <filter-mapping>
+             <filter-name>CharacterEncodingFilter</filter-name>
+             <url-pattern>/*</url-pattern>
+           </filter-mapping>
+
+           特别注意：配置filter因该注意，filter会按配置的顺序先后顺序执行，所以处理乱码的filter放在其它参数拦截的filter之前，比如上面用到的HiddenHttpMethodFilter
+
+           使用原理：org.springframework.web.filter.CharacterEncodingFilter
+           protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+                   String encoding = this.getEncoding();
+                   //这里的encoding就是我们上面配置的
+                   if (encoding != null) {
+                       if (this.isForceRequestEncoding() || request.getCharacterEncoding() == null) {
+                           //通过拦截器拦截请求后强行设置
+                           request.setCharacterEncoding(encoding);
+                       }
+
+                       if (this.isForceResponseEncoding()) {
+                           、、响应设置
+                           response.setCharacterEncoding(encoding);
+                       }
+                   }
+
+    响应乱码：
+    response.setContentType("text/html,charset=utf-8")
+
+    SpringMVC支持对象映射和级联属性映射
+    com.itheima.controller.AttributeMappingController
+
+    HttpServletRequest
+    HttpServletResponse
+    Httpsession
+    java.security.Principal  https安全协议
+    Locale  国际化
+    InputStream
+    outputStreamReader
+    writer
+
+    @Controller
+    public class PrimitiveAPIController {
+        @RequestMapping("/api")
+        public String getPrimitiveAPI(HttpServletRequest request, HttpServletResponse response, HttpSession session){
+            try {
+                request.setAttribute("hello","hello springMVC");
+                session.setAttribute("hello1","hello Spring");
+
+                //得到请求字节流 用于文件上传
+                ServletInputStream inputStream = request.getInputStream();
+                //得到字符流
+                BufferedReader reader = request.getReader();
+
+                ServletOutputStream outputStream = response.getOutputStream();
+                response.getWriter();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return "success";
+
+        }
+
+
+        SpringMVC将数据带会到页面 ：
+        1.SpringMVC通过在方法上传入原生的request和session外还能怎么样把数据带给页面
+        2.可以在方法处传入Map、或者Model或者ModelMap。这些参数里面保存的所有数据都会被放在request域中,在页面通过requestScope获取
+          Map.Model,ModelMap:最终都是BindingAwareModelMap在工作;相当于给BindingAwareModelMap中保存的东西都会被放在请求域中;
+        3.ModelAndView：既包含视图信息(页面地址）也包含模型数据（给页面带的数据),而且数据是放在请求域中;
+          使用一个注解
+          @sessionAttributes(只能标在类上)
+          @sessionAttributes(value={"msg"}，types={String.class} ):  可以指定key或者指定保存的类型的数据
+          给BindingAwareModelMap中保存的数据，同时给session中放一份;value指定保存数据时要给session中放的数据的key
+
+          建议：后来推荐@SessionAttributes就别用了，可能会引发异常;给session中放数据请使用原生API;
+
+
+        servlet的四大作用域范围对象：
+        pageContext:
+        request:
+        session:
+        application:
+
+        @ModelAttribute拟解决的问题：
+
+        并不是全字段修改:只会修改部分字段,以修改用户信息为例;username password address;
+        1)、不修改的字段可以在页面进行展示但是不要提供修改输入框;
+        2)、为了简单，Controller直接在参数位置来写Book对象
+        3) .SpringMVC为我们自动封装book:(没有带的值是nul1)
+        4)、如果接下来调用了一个全字段更新的dao操作，会将其他的字段可能变为null，
+
+        @ModelAttribute的原理：
+        当一个修改的表单提交到控制器，SpringMVC为了方便参数封装，会创建一个新的对象存储这些数据，
+           1.如果前端没有输入的字段，我们将保存一个NULL
+           2.如果发生数据库的全字段更行，将可能导致不该修改的数据被修改为NULL
+        @ModelAttribute解决的思想就是，提前从数据库获取到该条数据封装到对象中，然后前端字段如果传入值就覆盖，没有传值就和数据库原纪录保持一致，这样不会导致数据丢失。
+
+        1) .SpringMVC要封装请求参数的Book对象不应该是自己new出来的
+              而应该是{从数据库}中拿到的准备好的对象
+        @ModelAttribute.
+        方法位置:这个方法就会提前于目标方法先运行,
+        1)我们可以在这里提前查出数据库中图书的信息
+        2)将这个图书信息保存起来(方便下一个方法还能使用)
+        另一个修改方法的参数上通过 @ModelAttribute 指明让SpringMVC不在创建新对象，而是从ModelAttribute中获取。
+
+        例子见：
+        com.itheima.controller.ModelAttributeHandler
