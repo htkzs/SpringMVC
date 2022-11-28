@@ -1,3 +1,6 @@
+SpringMVC的执行流程:
+![img_9.png](img_9.png)
+
 使用PUT或者DELETE请求时可能出现以下问题 高版本Tomcat导致
 ![img.png](img.png)
 解决办法就是增加一个配置 在JSP页面头文件增加 isErrorPage="true"

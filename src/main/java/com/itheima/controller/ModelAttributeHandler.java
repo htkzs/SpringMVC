@@ -30,7 +30,9 @@ public class ModelAttributeHandler {
     }
     /*
      * @Author GhostGalaxy
-     * @Description //TODO
+     * @Description @ModelAttribute 标注的方法会提前运行并把方法的运行结果放在隐含模型中;
+                    放的时候会使用一个key;
+                    如果@ModelAttribute( "book")指定了，就用指定的book;如果没指定就用返回值类型的首字母小写作为key;
      * @Date 21:44:41 2022/11/27
      * @Param []
      * @return void

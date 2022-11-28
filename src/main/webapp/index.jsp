@@ -48,5 +48,7 @@
     图书名称：<input type="submit" value="修改记录"/>
 </form>
 
+
+<a href="/handle">测试请求转发forward</a>
 </body>
 </html>
