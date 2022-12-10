@@ -1,0 +1,5 @@
+利用SpringMVC做一个CRUD(增删改查)符合Rest风格的;
+c : Create :创建
+R : Retrieve :查询
+U : Update:更新
+D : Delete :删除

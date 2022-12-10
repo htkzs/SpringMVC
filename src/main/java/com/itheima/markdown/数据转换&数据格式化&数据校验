@@ -1,0 +1,109 @@
+
+数据绑定需要做的那些事。
+1)、页面提交的所有数据都是字符串?
+2 ) 转换为Integer age,Date birth;
+employName=zhangsan&age=18&gender=1
+String age = request.getParameter("age");牵扯到以下操作;
+1)、数据绑定期间的数据类型转换?
+String--Integer String--Boolean,xXx
+2 )、数据绑定期间的数据格式化问题
+birth=2017-12-15----->Date 2017/12/15 2017.12.15 2017-12-15
+
+数据校验?
+我们提交的数据必须是合法的?
+前端校验: js+正则表达式;
+后端校验∶重要数据也是必须的;
+
+org.springframework.web.method.annotation.ModelAttributeMethodProcessor
+if (bindingResult == null) {
+			// Bean property binding and validation;
+			// skipped in case of binding failure on construction.
+			//数据绑定工作 类型转换 格式校验 格式化等
+			WebDataBinder binder = binderFactory.createBinder(webRequest, attribute, name);
+			if (binder.getTarget() != null) {
+				if (!mavContainer.isBindingDisabled(name)) {
+				    //将页面提交过来的值保存在javaBean的属性中
+					bindRequestParameters(binder, webRequest);
+				}
+				validateIfApplicable(binder, parameter);
+				if (binder.getBindingResult().hasErrors() && isBindExceptionRequired(binder, parameter)) {
+					throw new BindException(binder.getBindingResult());
+				}
+			}
+			// Value type adaptation, also covering java.util.Optional
+			if (!parameter.getParameterType().isInstance(attribute)) {
+				attribute = binder.convertIfNecessary(binder.getTarget(), parameter.getParameterType(), parameter);
+			}
+			bindingResult = binder.getBindingResult();
+		}
+
+webDataBinder:数据绑定器负责数据绑定工作;  类型转换 格式校验 格式化等
+
+ConversionService：组件进行数据类型转换、数据格式化工作
+      ConversionService中有非常多的converter ;不同类型的转换和格式化用它自己的converter
+validators:数据校验器
+bindingResult：保存解析数据绑定期间数据校验产生的错误
+
+1.Spring MVC主框架将ServletRequest对象及目标方法的入参实例传递给WebDataBinderFactory实例，以创建DataBinder实例对象
+2.DataBinder调用装配在 Spring MVC上下文中的
+ConversionService 组件进行数据类型转换、数据格式化工作。将Servlet中的请求信息填充到入参对象中
+3.调用Validator 组件对已经绑定了请求消息的入参对象进行数据合法性校验﹐并最终生成数据绑定结果
+BindingData对象
+4.Spring MVC抽取 BindingResult中的入参对象和校验错误对象,将它们赋给处理方法的响应入参
+
+
+自定义类型转换器：
+1)、实现Converter接口﹐写一个自定义的类型转换器﹔
+    public class MyStringToEmployeeConverter implements Converter<String, Employee> {
+        @Override
+        public Employee convert(String s) {
+            Employee emp = new Employee();
+            String[] split = s.split("-");
+            emp.setId(Integer.parseInt(split[0]));
+            emp.setLastName(split[2]);
+            emp.setEmail(split[3]);
+            emp.setGender(1);
+            return emp;
+        }
+    }
+2)、Converter是ConversionService中的组件﹔
+    1、你的Converter得放进ConversionService 中 ;
+
+        <!--ConversionServiceFactoryBean帮助返回一个ConversionService-->
+              <bean id="conversionService" class="org.springframework.context.support.ConversionServiceFactoryBean">
+                     <property name="converters">
+                            <set>
+                                   <bean class="com.itheima.conver.MyStringToEmployeeConverter"/>
+                            </set>
+                     </property>
+              </bean>
+
+    2、将WebDataBinder中的ConversionService设置成我们这个加了自定义类型转换器的ConversionService
+    <!--开启注解驱动-->
+    <mvc:annotation-driven conversion-service="conversionService"/>
+
+ ConversionServiceFactoryBean会帮助我们返回一个 ConversionService
+ ConversionServiceFactoryBean implements FactoryBean<ConversionService> 通过调用 public ConversionService getObject() {
+                                                                                     return this.conversionService;
+                                                                                 }帮助我们返回了一 ConversionService
+
+
+ 通过地址测试：
+ http://localhost:8080/SpringMVC_Restful_CRUD_war_exploded/quick.jsp
+ @Controller
+ public class QuickBinding {
+     /*
+      * @Author GhostGalaxy
+      * @Description 增加一个方法用于快速将表单数据和实体类对象属性绑定 进行自定义的类型转换
+      * @Date 20:26:55 2022/12/10
+      * @Param [data]
+      * @return void
+      **/
+
+     @RequestMapping("/emp/convertor")
+     public void quickConvertor(@RequestParam("dataString") Employee employee){
+         System.out.println(employee);
+     }
+ }
+
+ 需要使用@RequestParam("dataString")接受一个请求的参数值 会使用类型转换器做转换。

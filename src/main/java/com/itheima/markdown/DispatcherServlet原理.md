@@ -48,10 +48,10 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
 			Exception dispatchException = null;
 
 			try {
-                //1.检查是否文件上传请求 包装为multipartRequestParsed
+                //1.检查是否文件上传请求 如果是文件上传请求包装为multipartRequestParsed
 				processedRequest = checkMultipart(request);
 				multipartRequestParsed = (processedRequest != request);
-                //2.根据当前请求地址决定使用那个类能来处理这个请求
+                //2.根据当前请求地址决定使用那个类(controller)能来处理这个请求
 				// Determine handler for the current request.
 				mappedHandler = getHandler(processedRequest);
 				if (mappedHandler == null) {
@@ -59,7 +59,7 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
 					noHandlerFound(processedRequest, response);
 					return;
 				}
-                //3.拿到能执行这个类的所有方法的适配器，适配器通过反射执行 注解方法的适配器
+                //3.拿到能执行这个类的所有方法的适配器，适配器通过反射执行 注解方法的适配器AmnnotationMethodHandlerAdapther
 				// Determine handler adapter for the current request.
 				HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
                 //4.获取请求的方式
@@ -79,12 +79,13 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
 
 				// Actually invoke the handler. 5.执行处理器的方法 通过ha适配器执行目标方法 返回值作为视图名 保存在ModelAndView
                 //目标方法无论怎么写，最终适配器执行完成以后都会将执行后的信息封装成ModelAndview
+                //  processedRequest 请求信息 mappedHandler 目标处理器
 				mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
                 //如果是异步方法直接返回
 				if (asyncManager.isConcurrentHandlingStarted()) {
 					return;
 				}
-                //如果方法的反回值为void 使用默认的视图名，
+                //如果方法的反回值为void 使用默认的视图名， 默认的视图名称是请求地址的视图名
 				applyDefaultViewName(processedRequest, mv);
 				mappedHandler.applyPostHandle(processedRequest, response, mv);
 			}
@@ -96,7 +97,7 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
 				// making them available for @ExceptionHandler methods and other scenarios.
 				dispatchException = new NestedServletException("Handler dispatch failed", err);
 			}
-            //6.转发到目标页面 processedRequest：包装后的request  response请求的响应 mappedHandler 目标处理器 mv(地址加数据) ModelAndView返回给页面视图
+            //6.转发到目标页面 processedRequest：包装后的request  response请求的响应 mappedHandler 目标处理器 mv(地址加数据) ModelAndView返回给页面视图，ModelAndView中的数据从请求域中获取。
 			processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
 		}
 		catch (Exception ex) {
@@ -125,7 +126,7 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
 1.所有请求过来DispatcherServlet收到请求，
 2.调用doDispatch()方法进行处理
   2.1 getHandler()根据当前请求地址决定使用那个类能来处理这个请求
-       根据当前请求在HandlerMapping中找到这个请求的映射信息，抉取到目标处理器类
+       根据当前请求在HandlerMapping中找到这个请求的映射信息，获取取到目标处理器类
   2.2 getHandlerAdapter() 拿到能执行这个类的所有方法的适配器，适配器通过反射执行 注解方法的适配器
        根据当前处理器类，找到当前类的HandlerAdapter(适配器)
   2.3 使用刚才获取到的适配器（AnnotationMethodHandlerAdapter）执行目标方法;
@@ -136,10 +137,12 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
 2.1细节:如何根据当前请求地址决定使用那个类能来处理这个请求？
    2.1.1 mappedHandler = getHandler(processedRequest); mappedHandler是一个执行链，processedRequest保存着请求的地址
 
+根据当前请求地址决定使用那个处理器类能来处理这个请求
 @Nullable
 protected HandlerExecutionChain getHandler(HttpServletRequest request) throws Exception {
     if (this.handlerMappings != null) {
-        //handlerMappings处理器映射，保存了每一个处理器能处理那些方法的映射信息，映射信息是IOC启动时维护好的
+        //handlerMappings处理器映射，保存了每一个处理器能处理那些方法的映射信息，在handlerMappings的handlerMap中保存着。handlerMappings的映射信息是IOC启动时维护好的(IOC启动创建Controller控制器对象的时候，会保存在handlerMappings的handlerMap属性中)。
+        // 这里共两个类型的handlerMappings分别为BeanNameUrlHandlerMapping(主要使用于Spring4 将Bean的name作为请求的URL) DefaultUrlHandlerMapping
         for (HandlerMapping mapping : this.handlerMappings) {
             HandlerExecutionChain handler = mapping.getHandler(request);
             if (handler != null) {
@@ -173,13 +176,33 @@ protected HandlerAdapter getHandlerAdapter(Object handler) throws ServletExcepti
         throw new ServletException("No adapter for handler [" + handler +
     "]: The DispatcherServlet configuration needs to include a HandlerAdapter that supports this handler");
 }
-handlerAdapters三种，
+Adapter：可以理解为反射工具
+handlerAdapters有三种，HttpRequestHandlerAdapter SimpleControllerHandlerAdapter AnnotationMethodHandlerAdapter(处理器是注解方法的反射工具)
 前两种都是通过实现接口实现的 ，我们这里使用的是注解 处理器类中只要有标了注解的这些方法就能用;
+
+三个适配器详解：
+HttpRequestHandlerAdapter支持以前实现HttpRequestHandler
+控制器的实现方式必须是继承自HttpRequestHandler
+public boolean supports(Object handler) {
+    return handler instanceof HttpRequestHandler;
+}
+SimpleControllerHandlerAdapter 控制器的实现必须是实现Controller的方式
+public boolean supports(Object handler) {
+    return handler instanceof Controller;
+}
+AnnotationMethodHandlerAdapter；通过注解的方式 @Controller的方式
+public boolean supports(Object handler) {
+    return handler instanceof Servlet;
+}
+
 
 这里使用注解的那个AnnotationAdapterHandler 
 ![img_6.png](img_6.png)
 
 探究HandlerMapping 和HandlerAdapter是何时有值的呢？
+
+
+
 
 org.springframework.web.servlet.DispatcherServlet中:
 
@@ -210,11 +233,11 @@ SpringMVC的九大组件:
 	/** List of HandlerExceptionResolvers used by this servlet. */
 	@Nullable
 	private List<HandlerExceptionResolver> handlerExceptionResolvers;
-    //
+    // 
 	/** RequestToViewNameTranslator used by this servlet. */
 	@Nullable
 	private RequestToViewNameTranslator viewNameTranslator;
-    //SpringMVC允许重定向携带数据的功能
+    //SpringMVC允许重定向携带数据的功能 使用session模拟 一次转发后清一次session
 	/** FlashMapManager used by this servlet. */
 	@Nullable
 	private FlashMapManager flashMapManager;
@@ -237,7 +260,7 @@ SpringMVC的九大组件:
 	 * Initialize the strategy objects that this servlet uses.
 	 * <p>May be overridden in subclasses in order to initialize further strategy objects.
 	 */
-    //初始化九大组件
+    //初始化九大组件 服务器一启动就为九大组件作初始化
 	protected void initStrategies(ApplicationContext context) {
 		initMultipartResolver(context);
 		initLocaleResolver(context);
@@ -264,7 +287,7 @@ SpringMVC的九大组件:
         //如果要探查
 		if (this.detectAllHandlerMappings) {
 			// Find all HandlerMappings in the ApplicationContext, including ancestor contexts.
-            //从bean工厂中找出所有的HandlerMapping
+            //从bean工厂中找出所有的HandlerMapping,
 			Map<String, HandlerMapping> matchingBeans =
 					BeanFactoryUtils.beansOfTypeIncludingAncestors(context, HandlerMapping.class, true, false);
 			if (!matchingBeans.isEmpty()) {
@@ -294,9 +317,58 @@ SpringMVC的九大组件:
 			}
 		}
 	}
+    
+默认策略的一个加载过程：
+
+    protected <T> List<T> getDefaultStrategies(ApplicationContext context, Class<T> strategyInterface) {
+		String key = strategyInterface.getName(); 
+        // 通过策略接口名获取到一个key 通过key获取一个value,通过value类型找到相应的类
+		String value = defaultStrategies.getProperty(key);
+		if (value != null) {
+			String[] classNames = StringUtils.commaDelimitedListToStringArray(value);
+			List<T> strategies = new ArrayList<>(classNames.length);
+			for (String className : classNames) {
+				try {
+					Class<?> clazz = ClassUtils.forName(className, DispatcherServlet.class.getClassLoader());
+					Object strategy = createDefaultStrategy(context, clazz);
+					strategies.add((T) strategy);
+				}
+				catch (ClassNotFoundException ex) {
+					throw new BeanInitializationException(
+							"Could not find DispatcherServlet's default strategy class [" + className +
+							"] for interface [" + key + "]", ex);
+				}
+				catch (LinkageError err) {
+					throw new BeanInitializationException(
+							"Unresolvable class definition for DispatcherServlet's default strategy class [" +
+							className + "] for interface [" + key + "]", err);
+				}
+			}
+			return strategies;
+		}
+		else {
+			return new LinkedList<>();
+		}
+	}
+
+   String value = defaultStrategies.getProperty(key);详解
+
+    static {
+		// Load default strategy implementations from properties file.
+		// This is currently strictly internal and not meant to be customized
+		// by application developers.
+        // DEFAULT_STRATEGIES_PATH变量的值为 类路径下的 DispatcherServlet.properties
+		try {
+			ClassPathResource resource = new ClassPathResource(DEFAULT_STRATEGIES_PATH, DispatcherServlet.class);
+			defaultStrategies = PropertiesLoaderUtils.loadProperties(resource);
+		}
+		catch (IOException ex) {
+			throw new IllegalStateException("Could not load '" + DEFAULT_STRATEGIES_PATH + "': " + ex.getMessage());
+		}
+	}
 
 默认配置文件的位置
-defaultStrategies默认的位置是和DispatcherServlet同级的目录下
+defaultStrategies默认的位置是和DispatcherServlet同级的目录下 具体为：org.springframework.web.servlet.DispatcherServlet.properties文件加载为默认策略。
     
     private static final Properties defaultStrategies;
 	static {
@@ -311,11 +383,12 @@ defaultStrategies默认的位置是和DispatcherServlet同级的目录下
 			throw new IllegalStateException("Could not load '" + DEFAULT_STRATEGIES_PATH + "': " + ex.getMessage());
 		}
 	}
+![img_13.png](img_13.png)
 总结: 组件的初始化:去容器中找这个组件，如果没有找到就用默认的配置; 有些组件根据Id找，有些组件根据类型
+
 
 执行目标方法细节，利用得到的适配器ha执行目标方法，并返回ModelAndView
 通过反射执行，难点在于如何确定控制器方法的参数 mappedHandler目标处理器 processedRequest封装的请求
-
 mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
 
 在org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter中

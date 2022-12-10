@@ -292,11 +292,25 @@ org.springframework.web.servlet.view.UrlBasedViewResolver
 总结：视图解析器只是为了得到视图对象﹔视图对象才能真正的转发（将模型数据全部放在请求域中）或者重定向到页面
 视图对象才能真正的渲染视图；
 
-总结：方法无论如何执行都会有一个ModelAndView返回值，视图解析器根据ModelAndView中的视图名称得到视图对象，视图对象将视图中的ModelView中的Model
+总结：方法无论如何执行都会有一个ModelAndView返回值，视图解析器根据ModelAndView中的视图名称得到视图对象，视图对象将视图中的ModelView中的数据Model
 进行渲染，数据放入请求域中。
 ![img_10.png](img_10.png)
 ![img_11.png](img_11.png)
+![img_12.png](img_12.png)
 
 视图和视图解析器
 请求处理方法执行完成后,最终返回一个ModelAndView对象。对于那些返回String , View或 ModeMap 等类型的处理方法，Spring MVC也会在内部捋它们装配成一个ModelAndView对象，它包合了逻辑名和模型对象的视图Spring MVC借助视图解析器(ViewResolver )得到最终的视图对象(View),最终的视图可以是JSP，也可能是Excel、JFreeChart等各种表现形式的视图
 对于最终究竟采取何种视图对象对模型数据进行渲染,处理器并不关心,处理器工作重点聚焦在生产模型数据的工作上，从而实现 MVC的充分解耦
+
+
+JSTLView的使用：
+<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver" id="viewResolver">
+    <property name="prefix" value="/WEB-INF/pages/"/>
+    <property name="suffix" value=".jsp"/>
+    <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+</bean>
+
+
+自定义视图解析器：
+
+
