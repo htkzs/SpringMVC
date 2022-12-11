@@ -1,0 +1,24 @@
+最近在写代码时遇到一个问题：
+在JSP页面中使用${}不会显示值
+
+比如：
+<%
+    pageContext.setAttribute("cpt",request.getContextPath());
+%>
+然后通过 ${pageContext.getAttribute("cpt")}获取值的时候发现原样输出，并不能返回值
+
+最后发现是web.xml文件头的问题
+原始的文件头为：
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE web-app PUBLIC
+     "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+     "http://java.sun.com/dtd/web-app_2_3.dtd" >
+
+修改后的web.xml的文件头为：
+    <?xml version="1.0" encoding="UTF-8"?>
+    <web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
+             version="4.0">
+
+    此时${pageContext.getAttribute("cpt")}就可以正确获取作用域中的值了。

@@ -31,6 +31,12 @@
        </bean>
        <!--静态资源直接交给tomcat处理-->
        <mvc:default-servlet-handler/>
+
+       <!--配置文件上传解析器-->
+       <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+              <property name="maxUploadSize" value="#{1024*1024*20}"/>
+              <property name="defaultEncoding" value="utf-8"/>
+       </bean>
        <!--开启注解驱动-->
        <mvc:annotation-driven conversion-service="conversionService"/>
 </beans>
