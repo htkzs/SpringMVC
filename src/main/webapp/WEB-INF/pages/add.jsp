@@ -36,6 +36,8 @@
        gender:<br/>
             男： <from:radiobutton path="gender" value="1"/><br/>
             女： <from:radiobutton path="gender" value="0"/><br/>
+       birth:<br/>
+            <from:input path="birth"/>
        <!--
        items="" : 指定要遍历的集合，自动遍历，遍历出的每一个元素是一个department
        itemLabel="departmentName"：指定遍历出来这个对象的那个属性作为option标签的值

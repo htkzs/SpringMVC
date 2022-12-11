@@ -1,0 +1,89 @@
+SpringMVC使用AJAX
+1.导包
+    <!--SpringMVC支持AJAX功能的JAR包-->
+          <dependency>
+              <groupId>com.fasterxml.jackson.core</groupId>
+              <artifactId>jackson-annotations</artifactId>
+              <version>2.12.4</version>
+          </dependency>
+          <dependency>
+              <groupId>com.fasterxml.jackson.core</groupId>
+              <artifactId>jackson-core</artifactId>
+              <version>2.12.4</version>
+          </dependency>
+          <dependency>
+              <groupId>com.fasterxml.jackson.core</groupId>
+              <artifactId>jackson-databind</artifactId>
+              <version>2.12.4</version>
+          </dependency>
+
+          <script type="text/javascript">
+              $("#ajaxButton").click(function () {
+                  $.ajax({
+                      url:"getAll/employees",
+                      type:"GET",
+                      success:function (data) {
+                          $.each(data,function (){
+                              var empInfo=this.lastName+"--->"+this.birth+"--->"+this.gender;
+                              $("div").append(empInfo+"<br/>");
+                          });
+                      }
+                  });
+                  //禁用超链接的默认提交行为
+                  return false;
+              });
+          </script>
+2.测试返回一个JSON数据
+  @Controller
+  public class AJAXController {
+      @Autowired
+      private EmployeeDao employeeDao;
+      /*
+       * @Author GhostGalaxy
+       * @Description 返回JSON格式的数据
+       * @Date 14:40:46 2022/12/11
+       * @Param []
+       * @return java.util.Collection<com.itheima.entity.Employee>
+       **/
+      @ResponseBody
+      @RequestMapping("/getAll/employees")
+      public Collection<Employee> getAllEmpForAJAX(){
+          Collection<Employee> employees = employeeDao.getAll();
+          return employees;
+      }
+  }
+3.编写前端代码
+  引入jquery：
+  <script type="text/javascript" src="scripts/jquery-1.9.1.min.js"></script>
+  注意不能为：因为当前为AJAX异步请求且在同一个页面，添加${pageContext.getAttribute("cpt")} 导致路径错误
+  <script type="text/javascript" src="${pageContext.getAttribute("cpt")}/scripts/jquery-1.9.1.min.js"></script>
+
+
+  <a href="/handle">测试请求转发forward</a>
+  <a href="getAll/employees" id="ajaxButton">通过AJAX查询员工的信息</a>
+  <div>
+
+  </div>
+  </body>
+  <script type="text/javascript">
+      $("#ajaxButton").click(function () {
+          $.ajax({
+              url:"getAll/employees",
+              type:"GET",
+              success:function (data) {
+                 console.log(data)
+                  $.each(data,function (){
+                      var empInfo=this.lastName+"--->"+this.birth+"--->"+this.gender;
+                      $("div").append(empInfo+"<br/>");
+                  });
+              }
+          });
+          //禁用超链接的默认提交行为
+          return false;
+      });
+  </script>
+
+  测试时确保jquery-1.9.1.min.js可以访问，否则ajax请求不起作用。
+
+
+Jackson的一些注解全部在jackson-annotation-2.12.4.jar包下

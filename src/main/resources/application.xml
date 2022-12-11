@@ -29,7 +29,8 @@
                      </set>
               </property>
        </bean>
-
+       <!--静态资源直接交给tomcat处理-->
+       <mvc:default-servlet-handler/>
        <!--开启注解驱动-->
        <mvc:annotation-driven conversion-service="conversionService"/>
 </beans>

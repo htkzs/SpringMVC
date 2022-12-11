@@ -107,3 +107,200 @@ BindingData对象
  }
 
  需要使用@RequestParam("dataString")接受一个请求的参数值 会使用类型转换器做转换。
+
+
+数据格式化：
+ 日期格式化：发现不增加任何格式化校验时，日期的输入格式只能为  2021/9/28，如果要使用2021-9-28或者202.9.28
+           @DateTimeFormat 注解可对 java.util.Date、java.util.Calendar、java.long.Long 时间类型进行标注：
+           pattern 属性：类型为字符串。指定解析/格式化字段数据的模式，如：”yyyy-MM-dd hh:mm:ss”
+           当表单数据进行数据绑定到实体类属性的时候就会校验格式
+
+           使用：规定页面的提交日期的格式必须为yyyy-MM-dd
+           @DateTimeFormat(pattern = "yyyy-MM-dd")
+           private Date birth;
+
+           注意：
+            <!--配置自定义的类型转换器-->
+               <bean class="org.springframework.context.support.ConversionServiceFactoryBean" id="conversionService">
+                   <property name="converters">
+                       <set>
+                           <bean class="com.atguigu.convertor.MyStringToEmployeeConverter"/>
+                       </set>
+                   </property>
+               </bean>
+              ConversionServiceFactoryBean这种配置的格式化器不支持format格式化功能，替换为一个可以支持数据校验的类型转换器，若自定义类型转换器和数据格式化转换器同时使用，就必须使用FormattingConversionServiceFactoryBean
+              public class FormattingConversionServiceFactoryBean implements FactoryBean<FormattingConversionService>, EmbeddedValueResolverAware, InitializingBean {
+                  @Nullable
+                  private Set<?> converters;
+                  @Nullable
+                  private Set<?> formatters;
+              FormattingConversionServiceFactoryBean既支持自定义的类型转换器还支持数据格式器format
+
+               <bean class="org.springframework.format.support.FormattingConversionServiceFactoryBean" id="conversionService">
+                      <property name="converters">
+                          <set>
+                              <bean class="com.atguigu.convertor.MyStringToEmployeeConverter"/> MyStringToEmployeeConverter为一个自定义的类型转换器
+                          </set>
+                      </property>
+                  </bean>
+            数字格式化：保留两位小数，每三位分割
+            @NumberFormat(pattern = "#,###,###.##")
+            private Double salary;
+
+数据校验：
+前端校验存在问题   1.浏览器可以禁用JS导致前端校验的失败   2.可以越过表单提交数据，直接通过请求访问提交action 不安全
+后端校验： 1.通过程序校验，如果失败跳转到添加页面重新填写
+          2.JSR303规范--一个实现就是 hibernate validator
+          Hibernate Validator 是 JSR 303 的一个参考实现，除支持所有标准的校验注解外，它还支持以下的扩展注解
+
+   如何快速的实现后端校验：
+   1.导入jar
+           <!--导入jsr303校验需要的核心依赖-->
+           <dependency>
+               <groupId>org.hibernate.validator</groupId>
+               <artifactId>hibernate-validator</artifactId>
+               <version>6.0.13.Final</version>
+           </dependency>
+           <dependency>
+               <groupId>org.hibernate.validator</groupId>
+               <artifactId>hibernate-validator-annotation-processor</artifactId>
+               <version>6.0.13.Final</version>
+           </dependency>
+           <!--JSR303必须的jar包-->
+            <dependency>
+               <groupId>com.fasterxml</groupId>
+               <artifactId>classmate</artifactId>
+               <version>1.5.1</version>
+           </dependency>
+           <dependency>
+               <groupId>org.jboss.logging</groupId>
+               <artifactId>jboss-logging</artifactId>
+               <version>3.3.3.Final</version>
+           </dependency>
+           <dependency>
+               <groupId>javax.validation</groupId>
+               <artifactId>validation-api</artifactId>
+               <version>2.0.1.Final</version>
+           </dependency>
+   2.添加注解
+    @NotEmpty
+   	@Length(min = 6,max=18)
+   	private String lastName;
+       @Email
+   	private String email;
+   	//1 male, 0 female
+   	private Integer gender;
+
+   	private Department department;
+       @Past
+   	@DateTimeFormat(pattern = "yyyy-MM-dd")
+   	private Date birth;
+   	3.在数据绑定的时候指明要通过JSR303校验正确后在封装数据 使用@Valid注解
+      public String addEmployee(@Valid Employee employee)
+    4.获取校验的信息 BindingResult result获取校验结果
+      通过<from:errors path="lastName"/>
+      public String addEmployee(@Valid Employee employee,BindingResult result)
+      前端表单获取校验结果：
+     lastName:<form:input path="lastName"/><from:errors path="lastName"/> <br/>
+     email:<form:input path="email"/><from:errors path="email"/><br/>
+
+     如果不通过<from:errors path="lastName"/>取出错误信息：
+     将错误的信息放入到Map中通过request返回到页面后,然后从页面中取出来
+
+     控制器方法:
+      @RequestMapping(value="/emp",method = RequestMethod.POST)
+         public String addEmployee(@Valid Employee employee,BindingResult result,Model model){
+             System.out.println("需要增加的员工信息为"+employee);
+             List<ObjectError> errors = result.getAllErrors();
+             System.out.println(errors);
+             boolean res = result.hasErrors();
+             Collection<Department> departments = departmentDao.getDepartments();
+             //将查询的结果放入到request域中，返回到页面
+             model.addAttribute("deptItems",departments);
+             System.out.println("是否有错误发生"+res);
+             Map<String,String> map = new HashMap<String,String>();
+             if(result.hasErrors()){
+                 List<FieldError> fieldErrors = result.getFieldErrors();
+                 for (FieldError error:fieldErrors){
+                     System.out.println("错误的消息为："+error.getDefaultMessage());
+                     System.out.println("错误的字段为："+error.getField());
+                     map.put(error.getField(),error.getDefaultMessage());
+                     System.out.println("========================");
+                 }
+                 model.addAttribute("errors",map);
+                 //如果数据校验不正确就跳回到添加页面
+                 return "add";
+             }else{
+                 employeeDao.save(employee);
+                 //重定向到查询所有员工的方法中
+                 return "redirect:emps";
+             }
+         }
+         前端页面：
+            lastName:<form:input path="lastName"/><from:errors path="lastName"/> ===== 通过原生表单取出来的结果值为：${errors.lastName} <br/>
+            email:<form:input path="email"/><from:errors path="email"/>===== 通过原生表单取出来的结果值为：${errors.email}<br/>
+            gender:<br/>
+                 男： <from:radiobutton path="gender" value="1"/><br/>
+                 女： <from:radiobutton path="gender" value="0"/><br/>
+            <!--增加一个birth字段用于测试日期的格式化功能-->
+            birth:<br/>
+                 <form:input path="birth"/><from:errors path="birth"/>===== 通过原生表单取出来的结果值为：${errors.birth}<br/>
+
+ 定制自己的错误消息：Hibernate Validator自己做好了国际化
+ 自己定制国际化错误消息提示：
+
+ 下面为产生错误校验后的错误的提示信息
+ [Field error in object 'employee' on field 'birth': rejected value [2021/9/28];
+ codes [typeMismatch.employee.birth,typeMismatch.birth,typeMismatch.java.util.Date,typeMismatch];
+ arguments [org.springframework.context.support.DefaultMessageSourceResolvable:codes [employee.birth,birth]; arguments []; default message [birth]];
+ default message [Failed to convert property value of type 'java.lang.String' to required type 'java.util.Date' for property 'birth'; nested exception is org.springframework.core.convert.ConversionFailedException: Failed to convert from type [java.lang.String] to type [@javax.validation.constraints.Past @org.springframework.format.annotation.DateTimeFormat java.util.Date] for value '2021/9/28';
+ nested exception is java.lang.IllegalArgumentException: Parse attempt failed for value [2021/9/28]], Field error in object 'employee' on field 'email': rejected value [dcsafdcsedwf];
+ codes [Email.employee.email,Email.email,Email.java.lang.String,Email];
+ arguments [org.springframework.context.support.DefaultMessageSourceResolvable:
+ codes [employee.email,email];
+ arguments []; default message [email],[Ljavax.validation.constraints.Pattern$Flag;@77721c59,.*];
+ default message [不是一个合法的电子邮件地址], Field error in object 'employee' on field 'lastName': rejected value [saad];
+ codes [Length.employee.lastName,Length.lastName,Length.java.lang.String,Length];
+ arguments [org.springframework.context.support.DefaultMessageSourceResolvable:
+ codes [employee.lastName,lastName]; arguments [];
+ default message [lastName],18,6]; default message [长度需要在6和18之间]]
+ 编写国际化资源文件的时候key必须来自于codes码中的值
+
+  codes [Email.employee.email,   Email校验规则 employee隐含模型的key值 email校验的字段值（如果是隐含模型中employee对象的email字段发生了@Email校验错误，就会生成Email.employee.email）
+          Email.email,           校验规则.属性名（Email.email :所有的email属性只要发生了@Email错误;）
+          Email.java.lang.String,  校验规则.类型名称 （只要是String类型发生了@Email错误）
+          Email                   校验规则 只要发生了@Email校验错误;
+          ]
+  国际化： key(错误代码)=错误的提示信息
+  errors_en_US.properties
+
+  Email.email=email incorrect!
+  NotEmpty=must not empty
+  Length.java.lang.String=length incorrect!{0}{1}{2}  长度在6-18位就可以通过{1}{2}动态取值
+  Past= must a past time!
+  typeMismatch.birth=The date format is incorrect
+  {0}：校验的属性的名称
+  {1}：18
+  {2}：6
+  errors_zh_CN.properties
+
+  Email.email=\u90AE\u7BB1\u683C\u5F0F\u4E0D\u6B63\u786E
+  NotEmpty=\u5FC5\u987B\u4E0D\u80FD\u4E3A\u7A7A
+  Length.java.lang.String=\u957F\u5EA6\u8D8A\u754C
+  Past= \u5FC5\u987B\u662F\u4E00\u4E2A\u8FC7\u53BB\u7684\u65F6\u95F4
+  typeMismatch.birth=\u65E5\u671F\u683C\u5F0F\u4E0D\u6B63\u786E
+
+  idea中文转Unicode的方式 亲测有效
+  1.把Default encoding for properties files选上UTF-8
+  2.再把下面的Transparent native-to-ascii conversion打上勾在proeperties文件中写入汉字
+  再把Transparent native-to-ascii conversion的勾去掉,
+
+  让Spring管理资源文件：ResourceBundleMessageSource
+   <!--绑定国际化资源文件 id的名称必须为messageSource-->
+      <bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">
+          <property name="basename" value="errors"/>
+      </bean>
+
+  在注解上通过message指定消息提示信息。
+   @Email(message="email的格式不正确")
+   private String email;
