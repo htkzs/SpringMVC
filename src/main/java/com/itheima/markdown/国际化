@@ -1,0 +1,54 @@
+1、导包导入了jstl的时候会自动创建为一个jstlView;可以快速方便的支持国际化功能;
+2、可以支持快速国际化;
+   1 ) javaWeb国际化步骤;
+   1)、得得到一个Locale对象;
+   2)、使用ResourceBundle绑定国际化资源文件;
+   3 )、使用ResourceBundle.getString("key");获取到国际化配置文件中的值;
+   4 ) . web页面的国际化，fmt标签库来做;
+       <fmt:setLocale>
+       <fmt:setBundle >
+       <fmt:message>
+   2)、有了JstlView以后;
+   1)、让Spring管理国际化资源就行
+   2)、直接去页面使用
+
+配置jstlView
+<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver" id="viewResolver">
+    <property name="prefix" value="/WEB-INF/pages/"/>
+    <property name="suffix" value=".jsp"/>
+    <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+</bean>
+
+1.编写国际化资源文件
+i18n_en_US.properties
+i18n_zh_CN.properties
+
+2.
+       <!--让SpringMVC管理国际化资源文件；配置一个资源文件管理器  id必须为 messageSource-->
+       <bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">
+              <!--basename指定基础名-->
+              <property name="basename" value="i18n"/>
+       </bean>
+
+
+ 3.fmt标签取值
+  <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+       <%@taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+       <html>
+       <head>
+           <title>I18N</title>
+           <fmt:message key="welcomeinfo"/>
+
+   </head>
+
+  在使用国际化的时候不能通过forward方式跳转，因为
+   spring源码中管理onRefresh()中的国际化功能在使用的时候就是 messageSource，所以要特别注意 id必须为 messageSource
+
+   发送一个请求跳转到一个页面，省略方法
+    <!--会走视图解析器InternalResourceViewResolver 所以使用是需要和视图解析器同时使用-->
+          <mvc:view-controller path="/ToLoginPage" view-name="login"/>
+
+          缺点是其它请求将失效
+          此时需要开启注解驱动
+           <mvc:annotation-driven/>
+

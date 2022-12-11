@@ -183,7 +183,7 @@ public class HiddenHttpMethodFilter extends OncePerRequestFilter {
                        }
 
                        if (this.isForceResponseEncoding()) {
-                           、、响应设置
+                           //响应设置
                            response.setCharacterEncoding(encoding);
                        }
                    }

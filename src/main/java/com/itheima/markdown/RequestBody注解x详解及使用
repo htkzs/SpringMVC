@@ -1,0 +1,116 @@
+1.使用RequestBody接收Post请求的请求体：测试表单的请求体
+  <form method="post" action="testRequestBody" enctype="multipart/form-data">
+      <input type="text" value="Hello world" name="lastName">
+      <input type="text" value="2060953137@163.com" name="email"/>
+      <input type="text" value="0" name="gender">
+      <input type="file" name="file">
+      <input type="submit" value="提交">
+  </form>
+
+  @Controller
+  public class RequestBodyHandler {
+      /*
+       * @Author GhostGalaxy
+       * @Description 测试接收一个JSON格式的数据 将这个数据封装在一个对象中
+       * @Date 17:22:32 2022/12/11
+       * @Param [employee]
+       * @return java.lang.String
+       **/
+      @RequestMapping("/testRequestBody")
+      public String testRequestBody(@RequestBody String body){
+          System.out.println("接受到POST请求的请求体为："+body);
+          return "success";
+      }
+  }
+
+结果为：
+接受到POST请求的请求体为：------WebKitFormBoundaryZEnkEqcgBKOCyvO4
+Content-Disposition: form-data; name="lastName"
+
+Hello world
+------WebKitFormBoundaryZEnkEqcgBKOCyvO4
+Content-Disposition: form-data; name="email"
+
+2060953137@163.com
+------WebKitFormBoundaryZEnkEqcgBKOCyvO4
+Content-Disposition: form-data; name="gender"
+
+0
+------WebKitFormBoundaryZEnkEqcgBKOCyvO4
+Content-Disposition: form-data; name="file"; filename="ElasticSearch安装问题.docx"
+Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+
+
+2.使用@RequestBody接受Ajax请求的的JSON字符串，封装到一个对象中
+<a href="testRequestBody01" >测试提交一个JSON格式的字符串给后台</a>
+
+</body>
+    <script type="text/javascript">
+        $("a:first").click(function () {
+            //定义一个js对象
+            var emp={lastName:"韩梅梅",email:"2060953737@qq.com",gender:0};
+            alert(typeof emp);
+            //将JS对象转换为一个JSON字符串
+            var empStr = JSON.stringify(emp)
+            alert(typeof empStr);
+            $.ajax({
+                url:"testRequestBody01",
+                type:"POST",
+                data:empStr,
+                contentType:"application/json",
+                success:function (data) {
+                    //data是一个成功页面 通过alert弹出
+                    alert(data)
+                }
+            });
+            return false;
+        });
+    </script>
+
+3.使用HttpEntity<String> 可以获取到整个请求的请求头和请求体
+ @RequestMapping("/testHttpEntity")
+    public String testHttpEntity(HttpEntity<String> httpEntity){
+        System.out.println(httpEntity);
+        return "success";
+    }
+测试结果为：
+
+<[host:"localhost:8080", connection:"keep-alive", upgrade-insecure-requests:"1", user-agent:"Mozilla/5.0
+(Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36",
+accept:"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,
+application/signed-exchange;v=b3;q=0.9", sec-fetch-site:"none", sec-fetch-mode:"navigate", sec-fetch-dest:"document",
+accept-encoding:"gzip, deflate, br", accept-language:"zh-CN,zh;q=0.9", cookie:"JSESSIONID=110A2A5B131F81387E33B6DB1B09182F;
+JSESSIONID=C17013FA90BF8322AA4A270C3F144E19"]>
+
+4.将返回值直接写到响应体中,不进行页面跳转
+ /*
+     * @Author GhostGalaxy
+     * @Description 如果指定 @ResponseBody注解返回的字符串将会直接放到响应体中 不进行页面跳转 测试地址：http://localhost:8080/springmvc/testResponseBody
+     * @Date 18:27:08 2022/12/11
+     * @Param []
+     * @return java.lang.String
+     **/
+    @ResponseBody
+    @RequestMapping("/testResponseBody")
+    public String testResponseBody(){
+        return "success";
+    }
+
+5.返回ResponseEntity<String>
+    /*
+        * @Author GhostGalaxy
+        * @Description 定制响应体 测试地址：http://localhost:8080/springmvc/testResponseEntity
+        * @Date 18:33:35 2022/12/11
+        * @Param []
+        * @return org.springframework.http.ResponseEntity<java.lang.String>
+        **/
+       @RequestMapping("/testResponseEntity")
+       public ResponseEntity<String> testResponseEntity(){
+           HttpStatus statusCode;
+           String body="<h1>success</h1>";
+           MultiValueMap<String, String> headers=new HttpHeaders();
+           headers.add("set-cookie","username=韩梅梅");
+           ResponseEntity<String> responseEntity = new ResponseEntity<>(body, headers, HttpStatus.OK);
+           return responseEntity;
+       }
+
