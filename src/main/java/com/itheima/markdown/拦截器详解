@@ -1,0 +1,265 @@
+SpringMVC提供了拦截器机制;允许运行目标方法之前进行一些拦截工作，或者目标方法运行之后进行一些其他处理; 和filter相同的功能,
+filter:javaWeb定义
+interceptor:SpringMVC定义的
+
+1.拦截器是一个接口
+   包含三个方法:
+   boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+   void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
+   			@Nullable ModelAndView modelAndView)
+   afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler,
+   			@Nullable Exception ex)
+
+   preHandle :在目标方法运行之前调用;返回boolean ; return true ; (chain.doFilter))放行;return false ;不放行
+   postHandle :在目标方法运行之后调用:目标方法调用之后
+   afterCompletion:在请求整个完成之后;来到目标页面之后; chain.doFilter()放行;资源响应之后;
+2.实现拦截器
+   准备一个请求拦截的对象
+   /**
+    * @ClassName : InterceptorHandler
+    * @Description : 测试SpringMVC的拦截器
+    * @Author : 20609
+    * @Date: 2022/12/12  10:55
+    */
+   @Controller
+   public class InterceptorHandler {
+       @RequestMapping("/hello/interceptor")
+       public String testInterceptor(){
+           System.out.println("目标方法执行了......");
+           return "success";
+       }
+   }
+
+   2.1 实现HandlerInterceptor接口
+       /**
+        * @ClassName : MyInterceptor
+        * @Description : 测试Interceptor
+        * @Author : 20609
+        * @Date: 2022/12/12  10:58
+        */
+       public class MyInterceptor implements HandlerInterceptor {
+           //目标方法执行之前拦截 return false为拦截 return true为放行
+           @Override
+           public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+               System.out.println("MyInterceptor的preHandle执行");
+               return true;
+           }
+           //目标方法刚执行完成就执行
+           @Override
+           public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+               System.out.println("MyInterceptor的postHandle执行");
+           }
+           //页面返回后执行
+           @Override
+           public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+               System.out.println("MyInterceptor的afterCompletion执行");
+           }
+       }
+   2.2 配置拦截器
+              <!--配置interceptor-->
+              <mvc:interceptors>
+                     <mvc:interceptor>
+                            <!--配置拦截具体的请求-->
+                            <mvc:mapping path="/hello/interceptor"/>
+                            <bean class="com.itheima.interceptor.MyInterceptor"/>
+                     </mvc:interceptor>
+              </mvc:interceptors>
+3.拦截器的运行流程
+  MyInterceptor的preHandle执行
+  目标方法执行了......
+  MyInterceptor的postHandle执行
+  来到目标页面success.jsp
+  MyInterceptor的afterCompletion执行
+
+4.其它流程：
+  1.preHandle不放行以后流程就没有
+  2.目标方法发生异常，可以回到报错页面 afterCompletion会执行(只要放行了就会来到页面，哪怕是报错页面)
+
+拦截器链：
+  配置一个多拦截器：
+        <!--配置interceptor-->
+         <mvc:interceptors>
+                <!--该拦截器是拦截所有的请求-->
+                <bean class="com.itheima.interceptor.MyInterceptor"/>
+                <mvc:interceptor>
+                       <!--配置拦截具体的请求-->
+                       <mvc:mapping path="/hello/interceptor"/>
+                       <bean class="com.itheima.interceptor.MySecondInterceptor"/>
+                </mvc:interceptor>
+         </mvc:interceptors>
+  拦截器执行顺序：正常的情况
+  MyInterceptor的preHandle执行
+  MySecondInterceptor的preHandle执行    preHandle的执行和配置拦截器的顺序有关
+  目标方法执行了......
+  MySecondInterceptor的postHandle执行   postHandle的执行和拦截器配置顺序相反
+  MyInterceptor的postHandle执行
+  来到目标页面success.jsp
+  MySecondInterceptor的afterCompletion执行     afterCompletion执行和拦截器配置顺序相反
+  MyInterceptor的afterCompletion执行
+
+
+  拦截器执行异常的情况：
+  1、不放行;
+      1)、哪一块不放行从此以后都没有﹔
+      MySecondInterceptor不放行;但是他前面已经放行了的拦截器的afterCompletion总会执行;
+
+
+
+
+  代码调试之前：
+  MyInterceptor 是放行的
+  MySecondInterceptor 不放行
+  执行的结果为：
+  MyInterceptor的preHandle执行
+  MySecondInterceptor的preHandle执行
+  MyInterceptor的afterCompletion执行
+
+
+  通过拦截器的源码分析上述结果：
+
+  org.springframework.web.servlet.DispatcherServlet
+
+  protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
+  		HttpServletRequest processedRequest = request;
+  		HandlerExecutionChain mappedHandler = null;
+  		boolean multipartRequestParsed = false;
+
+  		WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
+
+  		try {
+  			ModelAndView mv = null;
+  			Exception dispatchException = null;
+
+  			try {
+  				processedRequest = checkMultipart(request);
+  				multipartRequestParsed = (processedRequest != request);
+                //获取方法的执行链
+  				// Determine handler for the current request.
+  				mappedHandler = getHandler(processedRequest);
+  				if (mappedHandler == null) {
+  					noHandlerFound(processedRequest, response);
+  					return;
+  				}
+
+  				// Determine handler adapter for the current request.
+  				HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
+
+  				// Process last-modified header, if supported by the handler.
+  				String method = request.getMethod();
+  				boolean isGet = "GET".equals(method);
+  				if (isGet || "HEAD".equals(method)) {
+  					long lastModified = ha.getLastModified(request, mappedHandler.getHandler());
+  					if (new ServletWebRequest(request, response).checkNotModified(lastModified) && isGet) {
+  						return;
+  					}
+  				}
+                //1.执行PreHandle() 目标方法执行之前执行 如果PreHandle()返回false下面的PostHandle将不会被执行但会执行finally中的内容
+  				if (!mappedHandler.applyPreHandle(processedRequest, response)) {
+  					return;
+  				}
+
+  				// Actually invoke the handler.
+  				mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
+
+  				if (asyncManager.isConcurrentHandlingStarted()) {
+  					return;
+  				}
+
+  				applyDefaultViewName(processedRequest, mv);
+  				//2.执行PostHandle 目标方法执行完毕后执行
+  				mappedHandler.applyPostHandle(processedRequest, response, mv);
+  			}
+  			catch (Exception ex) {
+  				dispatchException = ex;
+  			}
+  			catch (Throwable err) {
+  				// As of 4.3, we're processing Errors thrown from handler methods as well,
+  				// making them available for @ExceptionHandler methods and other scenarios.
+  				dispatchException = new NestedServletException("Handler dispatch failed", err);
+  			}
+  			processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
+  		}
+  		catch (Exception ex) {
+  		    //3.异常情况下 发生异常总之会返回页面，所以afterCompletion一定会被执行
+  			triggerAfterCompletion(processedRequest, response, mappedHandler, ex);
+  		}
+  		catch (Throwable err) {
+  		    //发生异常
+  			triggerAfterCompletion(processedRequest, response, mappedHandler,
+  					new NestedServletException("Handler processing failed", err));
+  		}
+  		finally {
+  			if (asyncManager.isConcurrentHandlingStarted()) {
+  				// Instead of postHandle and afterCompletion
+  				if (mappedHandler != null) {
+  					mappedHandler.applyAfterConcurrentHandlingStarted(processedRequest, response);
+  				}
+  			}
+  			else {
+  				// Clean up any resources used by a multipart request.
+  				if (multipartRequestParsed) {
+  					cleanupMultipart(processedRequest);
+  				}
+  			}
+  		}
+  	}
+
+  	org.springframework.web.servlet.HandlerExecutionChain
+
+  	boolean applyPreHandle(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    		HandlerInterceptor[] interceptors = getInterceptors();
+    		if (!ObjectUtils.isEmpty(interceptors)) {
+    			for (int i = 0; i < interceptors.length; i++) {
+    				HandlerInterceptor interceptor = interceptors[i];
+    				//执行拦截器的preHandle方法
+    				if (!interceptor.preHandle(request, response, this.handler)) {
+    					triggerAfterCompletion(request, response, null);
+    					return false;
+    				}
+    				this.interceptorIndex = i;
+    			}
+    		}
+    		return true;
+    	}
+
+        org.springframework.web.servlet.HandlerExecutionChain
+
+        void triggerAfterCompletion(HttpServletRequest request, HttpServletResponse response, @Nullable Exception ex)
+        			throws Exception {
+
+        		HandlerInterceptor[] interceptors = getInterceptors();
+        		if (!ObjectUtils.isEmpty(interceptors)) {
+        			for (int i = this.interceptorIndex; i >= 0; i--) {
+        				HandlerInterceptor interceptor = interceptors[i];
+        				try {
+        					interceptor.afterCompletion(request, response, this.handler, ex);
+        				}
+        				catch (Throwable ex2) {
+        					logger.error("HandlerInterceptor.afterCompletion threw exception", ex2);
+        				}
+        			}
+        		}
+        	}
+
+分析程序：
+1.发现一共包含三个拦截器分别为：1.MyInterceptor 2.MySecondInterceptor 3.ConversionServiceExposingInterceptor(默认的)
+   1.执行MyInterceptor interceptor.preHandle(request, response, this.handler)执行返回true 非true即false
+     interceptorIndex = 0
+   2.执行MySecondInterceptor interceptor.preHandle(request, response, this.handler)执行返回false 非false即true
+     执行 MyInterceptor triggerAfterCompletion(request, response, null);
+     跳出
+     if (!mappedHandler.applyPreHandle(processedRequest, response)) {
+       					return;
+       				}
+     后续只执行finally中的内容
+
+
+拦截器(Interceptor)和过滤器filter：
+   filter属于javaWeb三大组件之一 通过tomcat加载,而Interceptor属于SpringMVC组件，通过IOC管理，功能更加强大，如果一个业务需要配合其它组件来完成
+   就可以使用Interceptor
+
+   比如在方法执行时需要查询数据库就可以
+   public class MyInterceptor implements HandlerInterceptor {
+       //目标方法执行之前拦截 return false为拦截 return true为放行
+       @Autowired
+       private EmployeeDao employeeDao;

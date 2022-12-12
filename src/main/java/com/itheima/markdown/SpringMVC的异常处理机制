@@ -1,0 +1,493 @@
+1.异常解析原理：通过SpringMVC的九大组件的异常解析器组件处理
+  1.1 首先来看一下SpringMVC默认加载的异常解析器
+
+      org.springframework.web.servlet.DispatcherServlet
+
+      private void initHandlerExceptionResolvers(ApplicationContext context) {
+      		this.handlerExceptionResolvers = null;
+            //探查所有的异常处理解析器 类型为HandlerExceptionResolver.class
+      		if (this.detectAllHandlerExceptionResolvers) {
+      			// Find all HandlerExceptionResolvers in the ApplicationContext, including ancestor contexts.
+      			Map<String, HandlerExceptionResolver> matchingBeans = BeanFactoryUtils
+      					.beansOfTypeIncludingAncestors(context, HandlerExceptionResolver.class, true, false);
+      			if (!matchingBeans.isEmpty()) {
+      				this.handlerExceptionResolvers = new ArrayList<>(matchingBeans.values());
+      				// We keep HandlerExceptionResolvers in sorted order.
+      				AnnotationAwareOrderComparator.sort(this.handlerExceptionResolvers);
+      			}
+      		}
+      		//加载用户配置的异常解析器 HANDLER_EXCEPTION_RESOLVER_BEAN_NAME参数的值为 handlerExceptionResolver(注入到IOC中的Bean的id 类型为HandlerExceptionResolver.class)
+      		else {
+      			try {
+      				HandlerExceptionResolver her =
+      						context.getBean(HANDLER_EXCEPTION_RESOLVER_BEAN_NAME, HandlerExceptionResolver.class);
+      				this.handlerExceptionResolvers = Collections.singletonList(her);
+      			}
+      			catch (NoSuchBeanDefinitionException ex) {
+      				// Ignore, no HandlerExceptionResolver is fine too.
+      			}
+      		}
+            //如果找不到其他解析器，通过注册默认的HandlerExceptionResolver，确保我们至少有一些HandlerExcessionResolver。
+      		// Ensure we have at least some HandlerExceptionResolvers, by registering
+            // default HandlerExceptionResolvers if no other resolvers are found.
+            if (this.handlerExceptionResolvers == null) {
+                this.handlerExceptionResolvers = getDefaultStrategies(context, HandlerExceptionResolver.class);
+                if (logger.isTraceEnabled()) {
+                    logger.trace("No HandlerExceptionResolvers declared in servlet '" + getServletName() +
+                            "': using default strategies from DispatcherServlet.properties");
+                }
+            }
+        }
+
+        org.springframework.web.servlet.DispatcherServlet
+
+        //如果没有就加载一个默认的策略的配置
+        protected <T> List<T> getDefaultStrategies(ApplicationContext context, Class<T> strategyInterface) {
+        		String key = strategyInterface.getName();
+        		String value = defaultStrategies.getProperty(key);
+        		if (value != null) {
+        			String[] classNames = StringUtils.commaDelimitedListToStringArray(value);
+        			List<T> strategies = new ArrayList<>(classNames.length);
+        			for (String className : classNames) {
+        				try {
+        					Class<?> clazz = ClassUtils.forName(className, DispatcherServlet.class.getClassLoader());
+        					Object strategy = createDefaultStrategy(context, clazz);
+        					strategies.add((T) strategy);
+        				}
+        				catch (ClassNotFoundException ex) {
+        					throw new BeanInitializationException(
+        							"Could not find DispatcherServlet's default strategy class [" + className +
+        							"] for interface [" + key + "]", ex);
+        				}
+        				catch (LinkageError err) {
+        					throw new BeanInitializationException(
+        							"Unresolvable class definition for DispatcherServlet's default strategy class [" +
+        							className + "] for interface [" + key + "]", err);
+        				}
+        			}
+        			return strategies;
+        		}
+        		else {
+        			return new LinkedList<>();
+        		}
+        	}
+
+        	发现defaultStrategies这个配置文件通过静态加载  文件的位置在DispatcherServlet.properties (Spring-webmvc包下)
+
+        	private static final Properties defaultStrategies;
+
+            	static {
+            		// Load default strategy implementations from properties file.
+            		// This is currently strictly internal and not meant to be customized
+            		// by application developers.
+            		try {
+            		//这个defaultStrategies的配置文件在DispatcherServlet类路径下的 DispatcherServlet.properties文件
+            		//DEFAULT_STRATEGIES_PATH的值为 DispatcherServlet.properties
+            			ClassPathResource resource = new ClassPathResource(DEFAULT_STRATEGIES_PATH, DispatcherServlet.class);
+            			defaultStrategies = PropertiesLoaderUtils.loadProperties(resource);
+            		}
+            		catch (IOException ex) {
+            			throw new IllegalStateException("Could not load '" + DEFAULT_STRATEGIES_PATH + "': " + ex.getMessage());
+            		}
+            	}
+      1.2 得到默认配置文件配置的值为：
+      org.springframework.web.servlet.HandlerExceptionResolver=org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver,\
+      	org.springframework.web.servlet.mvc.annotation.ResponseStatusExceptionResolver,\
+      	org.springframework.web.servlet.mvc.support.DefaultHandlerExceptionResolver
+
+
+      1.3
+      ExceptionHandlerExceptionResolver @ExceptionHandler 异常处理方法
+      ResponseStatusExceptionResolver  @ResponseStatus 自定义的异常
+      DefaultHandlerExceptionResolver 判断是否有SpringMVC自带的异常
+
+  2.异常处理的流程
+  在页面渲染之前如果有异常就会处理异常
+
+      org.springframework.web.servlet.DispatcherServlet的doDispatch()方法
+
+      protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
+      		HttpServletRequest processedRequest = request;
+      		HandlerExecutionChain mappedHandler = null;
+      		boolean multipartRequestParsed = false;
+
+      		WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
+
+      		try {
+      			ModelAndView mv = null;
+      			Exception dispatchException = null;
+
+      			try {
+      				processedRequest = checkMultipart(request);
+      				multipartRequestParsed = (processedRequest != request);
+
+      				// Determine handler for the current request.
+      				mappedHandler = getHandler(processedRequest);
+      				if (mappedHandler == null) {
+      					noHandlerFound(processedRequest, response);
+      					return;
+      				}
+
+      				// Determine handler adapter for the current request.
+      				HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
+
+      				// Process last-modified header, if supported by the handler.
+      				String method = request.getMethod();
+      				boolean isGet = "GET".equals(method);
+      				if (isGet || "HEAD".equals(method)) {
+      					long lastModified = ha.getLastModified(request, mappedHandler.getHandler());
+      					if (new ServletWebRequest(request, response).checkNotModified(lastModified) && isGet) {
+      						return;
+      					}
+      				}
+
+      				if (!mappedHandler.applyPreHandle(processedRequest, response)) {
+      					return;
+      				}
+                    //通过适配器执行目标方法 如果执行目标方法时发生异常 进入processDispatchResult方法
+
+      				// Actually invoke the handler.
+      				mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
+
+      				if (asyncManager.isConcurrentHandlingStarted()) {
+      					return;
+      				}
+
+      				applyDefaultViewName(processedRequest, mv);
+      				mappedHandler.applyPostHandle(processedRequest, response, mv);
+      			}
+      			catch (Exception ex) {
+      				dispatchException = ex;
+      			}
+      			catch (Throwable err) {
+      				// As of 4.3, we're processing Errors thrown from handler methods as well,
+      				// making them available for @ExceptionHandler methods and other scenarios.
+      				dispatchException = new NestedServletException("Handler dispatch failed", err);
+      			}
+      			processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
+      		}
+      		catch (Exception ex) {
+      			triggerAfterCompletion(processedRequest, response, mappedHandler, ex);
+      		}
+      		catch (Throwable err) {
+      			triggerAfterCompletion(processedRequest, response, mappedHandler,
+      					new NestedServletException("Handler processing failed", err));
+      		}
+      		finally {
+      			if (asyncManager.isConcurrentHandlingStarted()) {
+      				// Instead of postHandle and afterCompletion
+      				if (mappedHandler != null) {
+      					mappedHandler.applyAfterConcurrentHandlingStarted(processedRequest, response);
+      				}
+      			}
+      			else {
+      				// Clean up any resources used by a multipart request.
+      				if (multipartRequestParsed) {
+      					cleanupMultipart(processedRequest);
+      				}
+      			}
+      		}
+      	}
+
+      	org.springframework.web.servlet.DispatcherServlet
+
+      	private void processDispatchResult(HttpServletRequest request, HttpServletResponse response,
+        			@Nullable HandlerExecutionChain mappedHandler, @Nullable ModelAndView mv,
+        			@Nullable Exception exception) throws Exception {
+
+        		boolean errorView = false;
+                //当上面代码指向目标方法时发生异常 此时的exception != null 如果是返回一个视图
+        		if (exception != null) {
+        		    //判断是否是ModelAndViewDefiningException 类型的异常信息
+        			if (exception instanceof ModelAndViewDefiningException) {
+        				logger.debug("ModelAndViewDefiningException encountered", exception);
+        				mv = ((ModelAndViewDefiningException) exception).getModelAndView();
+        			}
+        			else {
+        				Object handler = (mappedHandler != null ? mappedHandler.getHandler() : null);
+        				//处理异常
+        				mv = processHandlerException(request, response, handler, exception);
+        				errorView = (mv != null);
+        			}
+        		}
+
+        		// Did the handler return a view to render?
+        		if (mv != null && !mv.wasCleared()) {
+        		    //返回页面
+        			render(mv, request, response);
+        			if (errorView) {
+        				WebUtils.clearErrorRequestAttributes(request);
+        			}
+        		}
+        		else {
+        			if (logger.isTraceEnabled()) {
+        				logger.trace("No view rendering, null ModelAndView returned.");
+        			}
+        		}
+
+        		if (WebAsyncUtils.getAsyncManager(request).isConcurrentHandlingStarted()) {
+        			// Concurrent handling started during a forward
+        			return;
+        		}
+
+        		if (mappedHandler != null) {
+        			// Exception (if any) is already handled..
+        			mappedHandler.triggerAfterCompletion(request, response, null);
+        		}
+        	}
+
+            org.springframework.web.servlet.DispatcherServlet
+            //处理异常的方法
+            protected ModelAndView processHandlerException(HttpServletRequest request, HttpServletResponse response,
+            			@Nullable Object handler, Exception ex) throws Exception {
+
+            		// Success and error responses may use different content types
+            		request.removeAttribute(HandlerMapping.PRODUCIBLE_MEDIA_TYPES_ATTRIBUTE);
+
+            		// Check registered HandlerExceptionResolvers...
+            		ModelAndView exMv = null;
+            		if (this.handlerExceptionResolvers != null) {
+            		    //尝试使用每一个异常的解析器组件来执行 默认的三个异常  ExceptionHandlerExceptionResolver @ExceptionHandler
+                                                                     ResponseStatusExceptionResolver  @ResponseStatus
+                                                                     DefaultHandlerExceptionResolver 判断是否有SpringMVC自带的异常
+            			for (HandlerExceptionResolver resolver : this.handlerExceptionResolvers) {
+            				exMv = resolver.resolveException(request, response, handler, ex);
+            				if (exMv != null) {
+            					break;
+            				}
+            			}
+            		}
+            		if (exMv != null) {
+            			if (exMv.isEmpty()) {
+            				request.setAttribute(EXCEPTION_ATTRIBUTE, ex);
+            				return null;
+            			}
+            			// We might still need view name translation for a plain error model...
+            			if (!exMv.hasView()) {
+            				String defaultViewName = getDefaultViewName(request);
+            				if (defaultViewName != null) {
+            					exMv.setViewName(defaultViewName);
+            				}
+            			}
+            			if (logger.isTraceEnabled()) {
+            				logger.trace("Using resolved error view: " + exMv, ex);
+            			}
+            			else if (logger.isDebugEnabled()) {
+            				logger.debug("Using resolved error view: " + exMv);
+            			}
+            			WebUtils.exposeErrorRequestAttributes(request, ex, getServletName());
+            			return exMv;
+            		}
+                    //如果异常的解析器都不能处理最终将异常抛出，
+            		throw ex;
+            	}
+
+
+SpringMVC异常处理实践 @ExceptionHandler的使用
+     /**
+      * @ClassName : ExceptionHandler
+      * @Description : 测试SpringMVC的异常处理机制
+      * @Author : 20609
+      * @Date: 2022/12/12  15:57
+      */
+     @Controller
+     public class ExceptionHandlerTest {
+         /**
+         * @Param :
+         * @Description :  演示异常的发生 测试的URL http://localhost:8080/springmvc/exception?index=0
+         * @Author : 20609
+         * @Date : 2022/12/12 16:00
+         */
+
+         @RequestMapping("/exception")
+         public String showException(@RequestParam("index") Integer index){
+             //发生异常时被异常方法捕捉后进行处理
+             int i = 10/index;
+             return "success";
+         }
+         /**
+         * @Param :
+         * @Description :  当发生数学异常时 @ExceptionHandler标注的方法只限于处理本类发生的异常
+         * @Author : 20609
+         * @Date : 2022/12/12 16:06
+         */
+
+         @ExceptionHandler({ArithmeticException.class})
+         public ModelAndView exceptionHandler(Exception exception){
+             ModelAndView modelAndView = new ModelAndView("error");
+             modelAndView.addObject("ex",exception);
+             //视图解析器会拼串
+             return modelAndView;
+
+         }
+     }
+
+     在给页面返回异常信息时注意：方法参数位置不能写隐含模型，只能通过返回ModelAndView的方式进行。
+     如果有多个@ExceptionHandler都能处理这个异常，精确优先
+
+统一异常处理类  @ControllerAdvice 告诉Spring我是一个用于异常处理的类
+     /**
+      * @ClassName : UniteExceptionAdvice
+      * @Description : 统一异常处理器
+      * @Author : 20609
+      * @Date: 2022/12/12  16:21
+      */
+     @ControllerAdvice
+     public class UniteExceptionAdvice {
+         @ExceptionHandler({ArithmeticException.class})
+         public ModelAndView exceptionHandler(Exception exception){
+             ModelAndView modelAndView = new ModelAndView("error");
+             modelAndView.addObject("ex",exception);
+             //视图解析器会拼串
+             return modelAndView;
+
+         }
+     }
+
+
+  自定义的异常处理 @ResponseStatus
+
+  /**
+   * @ClassName : UserNameNotFindException
+   * @Description : 自定义异常
+   * @Author : 20609
+   * @Date: 2022/12/12  16:29
+   */
+  @ResponseStatus(reason = "用户登录拒绝",value = HttpStatus.NOT_ACCEPTABLE)
+  public class UserNameNotFindException extends RuntimeException {
+
+      private static final long serialVersionUID = 1286800777004095833L;
+  }
+
+  /**
+   * @ClassName : LoginController
+   * @Description : 登录控制器 测试URL http://localhost:8080/springmvc/login?username=admin123
+   * @Author : 20609
+   * @Date: 2022/12/12  16:36
+   */
+  @Controller
+  public class LoginController {
+
+      @RequestMapping("/login")
+      public ModelAndView login(@RequestParam("username") String userName){
+          if("admin".equals(userName)){
+              System.out.println("登录成功");
+              ModelAndView modelAndView = new ModelAndView("success");
+              return modelAndView;
+          }else{
+              System.out.println("登录失败");
+              //将异常抛出给tomcat去处理
+              throw new UserNameNotFindException();
+          }
+      }
+  }
+
+
+ SpringMVC自己的异常：
+ DefaultHandlerExceptionResolver：判断是否是SpringMVC自带的异常
+ 如Spring自己的异常： HttpRequestMethodNotSupportException
+
+ 源码解读：接下来看看SpringMVC是如何处理自己的异常的
+         1.模拟一个HttpRequestMethodNotSupportException异常
+           /**
+               * @Param :
+               * @Description :  模拟一个HttpRequestMethodNotSupportException springMVC定义的异常
+                * 访问一个POST请求将产生HttpRequestMethodNotSupportException
+               * @Author : 20609
+               * @Date : 2022/12/12 17:03
+               */
+
+               @RequestMapping(value = "/request/exception",method = RequestMethod.POST)
+               public ModelAndView testHttpRequestMethodNotSupportException(){
+                   ModelAndView modelAndView = new ModelAndView("success");
+                   return modelAndView;
+               }
+         通过地址栏 http://localhost:8080/springmvc/request/exception 发送的是GET请求 该异常被 com.itheima.exception.UniteExceptionAdvice.exceptionHandler01接收处理返回到error.jsp页面
+         报错信息为：
+
+         发生错误了
+         错误信息为:org.springframework.web.HttpRequestMethodNotSupportedException: Request method 'GET' not supported
+
+         2.关闭异常处理com.itheima.exception.UniteExceptionAdvice.exceptionHandler01看看SpringMVC是如何处理自己的异常的
+
+         在上面处理异常的方法中
+
+         for (HandlerExceptionResolver resolver : this.handlerExceptionResolvers) {
+                     				exMv = resolver.resolveException(request, response, handler, ex);
+                     				if (exMv != null) {
+                     					break;
+                     				}
+                     			}
+                     			if (exMv != null) {
+                                			if (exMv.isEmpty()) {
+                                				request.setAttribute(EXCEPTION_ATTRIBUTE, ex);
+                                				return null;
+                                			}
+                                			// We might still need view name translation for a plain error model...
+                                			if (!exMv.hasView()) {
+                                				String defaultViewName = getDefaultViewName(request);
+                                				if (defaultViewName != null) {
+                                					exMv.setViewName(defaultViewName);
+                                				}
+                                			}
+                                			if (logger.isTraceEnabled()) {
+                                				logger.trace("Using resolved error view: " + exMv, ex);
+                                			}
+                                			else if (logger.isDebugEnabled()) {
+                                				logger.debug("Using resolved error view: " + exMv);
+                                			}
+                                			//暴露异常信息 设置给一个异常的视图页面返回
+                                			WebUtils.exposeErrorRequestAttributes(request, ex, getServletName());
+                                			//返回一个异常的视图
+                                			return exMv;
+                                		}
+         通过这个for循环查找那个异常处理器可以处理该异常，发现只有 DefaultHandlerExceptionResolver这个可以处理 HttpRequestMethodNotSupportedException
+         此时exMv != null 跳出循环，找到了可以处理该异常的解析器
+         然后设置一些异常信息，设置给一个异常的视图页面返回
+
+
+
+配置其它异常处理解析器
+HandlerExceptionResolver作为异常处理解析器的顶级接口 包含众多的异常处理器
+ResponseStatusExceptionResolver
+DefaultHandlerExceptionResolver
+ExceptionHandlerExceptionResolver
+SimpleMappingExceptionResolver
+HandlerExceptionResolverComposite
+
+演示配置一个SimpleMappingExceptionResolver 处理器
+   1.配置异常处理解析器
+    <!--配置异常处理的解析器-->
+          <bean class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver" id="exceptionResolver">
+                 <property name="exceptionMappings">
+                        <props>
+                               <prop key="java.lang.NullPointerException">error</prop>
+                        </props>
+                 </property>
+                 <!--设置返回异常的隐含模型的key public static final String DEFAULT_EXCEPTION_ATTRIBUTE = "exception"; 默认为exception-->
+                 <property name="exceptionAttribute" value="ex"/>
+          </bean>
+    2.模拟一个NULL指针异常:
+    /**
+     * @ClassName : NullPointerError
+     * @Description : 模拟空指针异常 放问的URL http://localhost:8080/springmvc/err/page
+     * @Author : 20609
+     * @Date: 2022/12/12  17:51
+     */
+    @Controller
+    public class NullPointerError {
+
+        @RequestMapping("/err/page")
+        public String getNullPointer(){
+            String attr = null;
+            if(attr.equals("admin")){
+                return "success";
+            }
+            return null;
+        }
+    }
+
+    http://localhost:8080/springmvc/err/page访问测试，在本类中没有对该异常处理和全局异常处理类中都没有处理就会由
+    SimpleMappingExceptionResolver处理并返回视图
+
+

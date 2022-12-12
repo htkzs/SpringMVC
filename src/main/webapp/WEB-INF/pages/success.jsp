@@ -10,6 +10,9 @@
 <head>
     <title>Title</title>
 </head>
+<%
+    System.out.println("来到目标页面success.jsp");
+%>
 <body>
    success
 </body>

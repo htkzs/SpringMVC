@@ -29,8 +29,32 @@ public class DownloadHandler {
     }
 }
 
-文件下载：
+文件上传 ：
 1.文件上传的表单准备
+  <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+  <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+  <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+  <%
+      pageContext.setAttribute("cpt",request.getContextPath());
+  %>
+  <%=pageContext.getAttribute("cpt")%>
+
+  <script type="text/javascript" src="scripts/jquery-1.9.1.min.js"></script>
+  <html>
+
+  <head>
+      <title>file upload</title>
+  </head>
+  <body>
+  <form method="post" action="<%=pageContext.getAttribute("cpt")%>/upload" enctype="multipart/form-data">
+      用户名:<input type="text" name="username"/><br/>
+      用户头像:<input type="file" name="headerImg"><br/>
+      <input type="submit" value="上传提交"/>
+  </form>
+  ${pageContext.getAttribute("cpt")}
+  </body>
+  </html>
+  核心在于指定 enctype="multipart/form-data"
 2.导入相关依赖
         <!--导入文件上传的相关依赖-->
         <dependency>
@@ -49,3 +73,49 @@ public class DownloadHandler {
               <property name="maxUploadSize" value="#{1024*1024*20}"/>
               <property name="defaultEncoding" value="utf-8"/>
        </bean>
+
+4.单文件上传
+       @Controller
+       public class UploadHandler {
+           @RequestMapping("/upload")
+           public String fileUpload(@RequestParam("username") String userName,
+                                    @RequestParam("headerImg") MultipartFile uploadFile, Model model){
+               System.out.println("上传表单的字段名称为:"+uploadFile.getName());
+               System.out.println("上传的文件名称为:"+uploadFile.getOriginalFilename());
+               //保存文件
+               try {
+                   uploadFile.transferTo(new File("D:\\java web\\"+uploadFile.getOriginalFilename()));
+                   model.addAttribute("msg","file upload success");
+               } catch (IOException e) {
+                   model.addAttribute("msg","file upload failure");
+                   e.printStackTrace();
+               }
+               return "redirect:/success.jsp";
+           }
+       }
+
+
+
+5.多文件上传
+
+     @RequestMapping("/MultipleUpload")
+        public String MultipleFileUpload(@RequestParam("username") String userName,
+                                 @RequestParam("headerImg") MultipartFile[] uploadFiles, Model model){
+            for(MultipartFile uploadFile:uploadFiles){
+                System.out.println("上传表单的字段名称为:"+uploadFile.getName());
+                System.out.println("上传的文件名称为:"+uploadFile.getOriginalFilename());
+                //保存文件
+                try {
+                    uploadFile.transferTo(new File("D:\\java web\\"+uploadFile.getOriginalFilename()));
+                    model.addAttribute("msg","file upload success");
+                } catch (IOException e) {
+                    model.addAttribute("msg","file upload failure");
+                    e.printStackTrace();
+                }
+            }
+
+
+            return "redirect:/success.jsp";
+        }
+
+
