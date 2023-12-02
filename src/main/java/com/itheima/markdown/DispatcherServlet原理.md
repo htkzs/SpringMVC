@@ -1,17 +1,8 @@
->前端控制器架构 dispatcherServlet详解
-在原生的servlet中当控制器接收到前端请求时会通过doGet()或doPost()方法处理，那么在dispatcherServlet中是如何处理的呢？
-首先可以确定的是dispatcherServlet 是属于HttpServlet的一个实现
-继承关系如下：
-class DispatcherServlet extends FrameworkServlet
-class FrameworkServlet extends HttpServletBean
-HttpServletBean extends HttpServlet
-继承关系图如下图：
+> 前端控制器架构 dispatcherServlet详解 在原生的servlet中当控制器接收到前端请求时会通过doGet()或doPost()方法处理，那么在dispatcherServlet中是如何处理的呢？ 首先可以确定的是dispatcherServlet 是属于HttpServlet的一个实现 继承关系如下： class DispatcherServlet extends FrameworkServlet class FrameworkServlet extends HttpServletBean HttpServletBean extends HttpServlet 继承关系图如下图：
 ![img_4.png](img_4.png)
-首先 一个请求过来先来到HttpServlet 的 doGet()或者doPost()中 发现HttpServlet中的servlet并未做仍和事情，
-来到它的子类的实现发现HttpServletBean并没有重写该方法，而在FrameworkServlet中对该方法进行了重写
+首先 一个请求过来先来到HttpServlet 的 doGet()或者doPost()中 发现HttpServlet中的servlet并未做仍和事情， 来到它的子类的实现发现HttpServletBean并没有重写该方法，而在FrameworkServlet中对该方法进行了重写
 
-@Override
-protected final void doGet(HttpServletRequest request, HttpServletResponse response)
+@Override protected final void doGet(HttpServletRequest request, HttpServletResponse response)
 throws ServletException, IOException {
 
 		processRequest(request, response);
@@ -27,21 +18,17 @@ throws ServletException, IOException {
 
 		processRequest(request, response);
 	}
-发现无论是doGet()方法还是doPost()方法都调用了一个 processRequest(request, response);用于处理请求。
-在processRequest(request, response)方法又通过一个 doService(request, response);方法，进入
-doService(request, response);方法后发现该方法属于FrameworkServlet类的一个抽象方法，所以只能找他的具体实现类
-这个类就是DispatcherServlet。在DispatcherServlet的doService()方法中发现，调用一个doDispatch(request, response);方法
-这个方法就是前端控制器真正处理请求的方法
 
+发现无论是doGet()方法还是doPost()方法都调用了一个 processRequest(request, response);用于处理请求。 在processRequest(request, response)方法又通过一个
+doService(request, response);方法，进入 doService(request, response);方法后发现该方法属于FrameworkServlet类的一个抽象方法，所以只能找他的具体实现类
+这个类就是DispatcherServlet。在DispatcherServlet的doService()方法中发现，调用一个doDispatch(request, response);方法 这个方法就是前端控制器真正处理请求的方法
 
 接下来debug研究一下DispatcherServlet的doDispatch(request, response);请求处理器的流程。
 
 protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
-        HttpServletRequest processedRequest = request;
-        HandlerExecutionChain mappedHandler = null;
-        boolean multipartRequestParsed = false;
-        //获取到一个异步处理器 用于处理异步请求
-		WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
+HttpServletRequest processedRequest = request; HandlerExecutionChain mappedHandler = null; boolean
+multipartRequestParsed = false; //获取到一个异步处理器 用于处理异步请求 WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(
+request);
 
 		try {
 			ModelAndView mv = null;
@@ -122,94 +109,59 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
 			}
 		}
 	}
-总结：
-1.所有请求过来DispatcherServlet收到请求，
-2.调用doDispatch()方法进行处理
-  2.1 getHandler()根据当前请求地址决定使用那个类能来处理这个请求
-       根据当前请求在HandlerMapping中找到这个请求的映射信息，获取取到目标处理器类
-  2.2 getHandlerAdapter() 拿到能执行这个类的所有方法的适配器，适配器通过反射执行 注解方法的适配器
-       根据当前处理器类，找到当前类的HandlerAdapter(适配器)
-  2.3 使用刚才获取到的适配器（AnnotationMethodHandlerAdapter）执行目标方法;
-  2.4 目标方法执行后会返回一个ModelAndView对象
-  2.5 根据ModelAndView的信息转发到具体的页面，并可以在请求域中取出ModelAndView中的模型数据
 
+总结： 1.所有请求过来DispatcherServlet收到请求， 2.调用doDispatch()方法进行处理 2.1 getHandler()根据当前请求地址决定使用那个类能来处理这个请求
+根据当前请求在HandlerMapping中找到这个请求的映射信息，获取取到目标处理器类 2.2 getHandlerAdapter() 拿到能执行这个类的所有方法的适配器，适配器通过反射执行 注解方法的适配器
+根据当前处理器类，找到当前类的HandlerAdapter(适配器)
+2.3 使用刚才获取到的适配器（AnnotationMethodHandlerAdapter）执行目标方法; 2.4 目标方法执行后会返回一个ModelAndView对象 2.5
+根据ModelAndView的信息转发到具体的页面，并可以在请求域中取出ModelAndView中的模型数据
 
-2.1细节:如何根据当前请求地址决定使用那个类能来处理这个请求？
-   2.1.1 mappedHandler = getHandler(processedRequest); mappedHandler是一个执行链，processedRequest保存着请求的地址
+2.1细节:如何根据当前请求地址决定使用那个类能来处理这个请求？ 2.1.1 mappedHandler = getHandler(processedRequest);
+mappedHandler是一个执行链，processedRequest保存着请求的地址
 
-根据当前请求地址决定使用那个处理器类能来处理这个请求
-@Nullable
-protected HandlerExecutionChain getHandler(HttpServletRequest request) throws Exception {
-    if (this.handlerMappings != null) {
-        //handlerMappings处理器映射，保存了每一个处理器能处理那些方法的映射信息，在handlerMappings的handlerMap中保存着。handlerMappings的映射信息是IOC启动时维护好的(IOC启动创建Controller控制器对象的时候，会保存在handlerMappings的handlerMap属性中)。
-        // 这里共两个类型的handlerMappings分别为BeanNameUrlHandlerMapping(主要使用于Spring4 将Bean的name作为请求的URL) DefaultUrlHandlerMapping
-        for (HandlerMapping mapping : this.handlerMappings) {
-            HandlerExecutionChain handler = mapping.getHandler(request);
-            if (handler != null) {
-                //拿到控制器链后就返回
-                return handler;
-            }
-        }
-    }
-    return null;
-}
+根据当前请求地址决定使用那个处理器类能来处理这个请求 @Nullable protected HandlerExecutionChain getHandler(HttpServletRequest request) throws
+Exception { if (this.handlerMappings != null) {
+//handlerMappings处理器映射，保存了每一个处理器能处理那些方法的映射信息，在handlerMappings的handlerMap中保存着。handlerMappings的映射信息是IOC启动时维护好的(
+IOC启动创建Controller控制器对象的时候，会保存在handlerMappings的handlerMap属性中)。 // 这里共两个类型的handlerMappings分别为BeanNameUrlHandlerMapping(
+主要使用于Spring4 将Bean的name作为请求的URL) DefaultUrlHandlerMapping for (HandlerMapping mapping : this.handlerMappings) {
+HandlerExecutionChain handler = mapping.getHandler(request); if (handler != null) { //拿到控制器链后就返回 return handler; } } }
+return null; }
 
 handlerMappings两种 BeanNameUrlHandlerMapping(XML) 和 DefaultAnnotationHandlerMapping(注解)
 ![img_5.png](img_5.png)
-其中 DefaultAnnotationHandlerMapping的handlerMap中就保存着方法URL和控制器类的映射信息
-例如 /hello = com.itheima.controller.AttributeMappingController
+其中 DefaultAnnotationHandlerMapping的handlerMap中就保存着方法URL和控制器类的映射信息 例如 /hello =
+com.itheima.controller.AttributeMappingController
 
 handlerMap ioc容器启动创建Controller对象的时候扫描每个处理器都能处理什么请求，保存在HandlerMapping的handlerMap属性中;
 下一次请求过来，就来看哪个HandlerMapping中有这个请求映射信息就行了;
 
-2.2细节 如何获取适配器执行目标方法？
-HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());  mappedHandler.getHandler()获取到的就是目标处理器类
+2.2细节 如何获取适配器执行目标方法？ HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler()); mappedHandler.getHandler()
+获取到的就是目标处理器类
 
-protected HandlerAdapter getHandlerAdapter(Object handler) throws ServletException {
-    if (this.handlerAdapters != null) {
-        for (HandlerAdapter adapter : this.handlerAdapters) {
-            if (adapter.supports(handler)) {
-                return adapter;
-        }
-        }
-    }
-        throw new ServletException("No adapter for handler [" + handler +
-    "]: The DispatcherServlet configuration needs to include a HandlerAdapter that supports this handler");
-}
-Adapter：可以理解为反射工具
-handlerAdapters有三种，HttpRequestHandlerAdapter SimpleControllerHandlerAdapter AnnotationMethodHandlerAdapter(处理器是注解方法的反射工具)
+protected HandlerAdapter getHandlerAdapter(Object handler) throws ServletException { if (this.handlerAdapters != null) {
+for (HandlerAdapter adapter : this.handlerAdapters) { if (adapter.supports(handler)) { return adapter; } } } throw new
+ServletException("No adapter for handler [" + handler +
+"]: The DispatcherServlet configuration needs to include a HandlerAdapter that supports this handler"); }
+Adapter：可以理解为反射工具 handlerAdapters有三种，HttpRequestHandlerAdapter SimpleControllerHandlerAdapter
+AnnotationMethodHandlerAdapter(处理器是注解方法的反射工具)
 前两种都是通过实现接口实现的 ，我们这里使用的是注解 处理器类中只要有标了注解的这些方法就能用;
 
-三个适配器详解：
-HttpRequestHandlerAdapter支持以前实现HttpRequestHandler
-控制器的实现方式必须是继承自HttpRequestHandler
-public boolean supports(Object handler) {
-    return handler instanceof HttpRequestHandler;
-}
-SimpleControllerHandlerAdapter 控制器的实现必须是实现Controller的方式
-public boolean supports(Object handler) {
-    return handler instanceof Controller;
-}
-AnnotationMethodHandlerAdapter；通过注解的方式 @Controller的方式
-public boolean supports(Object handler) {
-    return handler instanceof Servlet;
-}
+三个适配器详解： HttpRequestHandlerAdapter支持以前实现HttpRequestHandler 控制器的实现方式必须是继承自HttpRequestHandler public boolean supports(
+Object handler) { return handler instanceof HttpRequestHandler; } SimpleControllerHandlerAdapter
+控制器的实现必须是实现Controller的方式 public boolean supports(Object handler) { return handler instanceof Controller; }
+AnnotationMethodHandlerAdapter；通过注解的方式 @Controller的方式 public boolean supports(Object handler) { return handler
+instanceof Servlet; }
 
-
-这里使用注解的那个AnnotationAdapterHandler 
+这里使用注解的那个AnnotationAdapterHandler
 ![img_6.png](img_6.png)
 
 探究HandlerMapping 和HandlerAdapter是何时有值的呢？
 
-
-
-
 org.springframework.web.servlet.DispatcherServlet中:
 
 SpringMVC的九大组件:
-  DispatcherServlet中有几个引用类型的属性;SpringMVC的九大组件;springMVC在工作的时候，关键位置都是由这些组件完成的;
-共同点:九大组件全部都是接口; 接口就提供了扩展性和规范。
-    
+DispatcherServlet中有几个引用类型的属性;SpringMVC的九大组件;springMVC在工作的时候，关键位置都是由这些组件完成的; 共同点:九大组件全部都是接口; 接口就提供了扩展性和规范。
+
     //文件上传解析器
     @Nullable
     private MultipartResolver multipartResolver;
@@ -245,9 +197,8 @@ SpringMVC的九大组件:
 	/** List of ViewResolvers used by this servlet. */
 	@Nullable
 	private List<ViewResolver> viewResolvers;
-    
-这九大组件的是在何时初始化的呢？
-在org.springframework.web.servlet.DispatcherServlet中:
+
+这九大组件的是在何时初始化的呢？ 在org.springframework.web.servlet.DispatcherServlet中:
 
     //spring源码中有这个方法onRefresh(),九大组件的初始化是在SpringIOC启动的时候
 
@@ -274,8 +225,7 @@ SpringMVC的九大组件:
 	}
 
 这里主要研究:
-    initHandlerMappings(context);
-    initHandlerAdapters(context);
+initHandlerMappings(context); initHandlerAdapters(context);
 
 发现 public interface HandlerMapping 是一个接口包含众多的实现类：
 ![img_7.png](img_7.png)
@@ -317,7 +267,7 @@ SpringMVC的九大组件:
 			}
 		}
 	}
-    
+
 默认策略的一个加载过程：
 
     protected <T> List<T> getDefaultStrategies(ApplicationContext context, Class<T> strategyInterface) {
@@ -351,7 +301,7 @@ SpringMVC的九大组件:
 		}
 	}
 
-   String value = defaultStrategies.getProperty(key);详解
+String value = defaultStrategies.getProperty(key);详解
 
     static {
 		// Load default strategy implementations from properties file.
@@ -367,9 +317,9 @@ SpringMVC的九大组件:
 		}
 	}
 
-默认配置文件的位置
-defaultStrategies默认的位置是和DispatcherServlet同级的目录下 具体为：org.springframework.web.servlet.DispatcherServlet.properties文件加载为默认策略。
-    
+默认配置文件的位置 defaultStrategies默认的位置是和DispatcherServlet同级的目录下
+具体为：org.springframework.web.servlet.DispatcherServlet.properties文件加载为默认策略。
+
     private static final Properties defaultStrategies;
 	static {
 		// Load default strategy implementations from properties file.
@@ -383,16 +333,15 @@ defaultStrategies默认的位置是和DispatcherServlet同级的目录下 具体
 			throw new IllegalStateException("Could not load '" + DEFAULT_STRATEGIES_PATH + "': " + ex.getMessage());
 		}
 	}
+
 ![img_13.png](img_13.png)
 总结: 组件的初始化:去容器中找这个组件，如果没有找到就用默认的配置; 有些组件根据Id找，有些组件根据类型
 
-
-执行目标方法细节，利用得到的适配器ha执行目标方法，并返回ModelAndView
-通过反射执行，难点在于如何确定控制器方法的参数 mappedHandler目标处理器 processedRequest封装的请求
-mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
+执行目标方法细节，利用得到的适配器ha执行目标方法，并返回ModelAndView 通过反射执行，难点在于如何确定控制器方法的参数 mappedHandler目标处理器 processedRequest封装的请求 mv =
+ha.handle(processedRequest, response, mappedHandler.getHandler());
 
 在org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter中
-    
+
     @Override
     @Nullable
     public final ModelAndView handle(HttpServletRequest request, HttpServletResponse response, Object handler)
@@ -446,8 +395,7 @@ mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
 		return mav;
 	} 
 
-执行处理器方法返回ModelAndView
-ModelAndView mav = invokeHandlerMethod(request, response, handlerMethod);
+执行处理器方法返回ModelAndView ModelAndView mav = invokeHandlerMethod(request, response, handlerMethod);
 
 进入invokeHandlerMethod()
 在org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter
@@ -508,8 +456,7 @@ ModelAndView mav = invokeHandlerMethod(request, response, handlerMethod);
 		}
 	}
 
-invokeHandlerMethod中执行invocableMethod.invokeAndHandle(webRequest, mavContainer);方法set一些值
-进入方法invokeAndHandle()方法此时来到：
+invokeHandlerMethod中执行invocableMethod.invokeAndHandle(webRequest, mavContainer);方法set一些值 进入方法invokeAndHandle()方法此时来到：
 org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod
 
     public void invokeAndHandle(ServletWebRequest webRequest, ModelAndViewContainer mavContainer,
@@ -543,8 +490,8 @@ org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMet
 			throw ex;
 		}
 	}
-Object returnValue = invokeForRequest(webRequest, mavContainer, providedArgs);反射获得方法参数
-进入invokeForRequest()方法
+
+Object returnValue = invokeForRequest(webRequest, mavContainer, providedArgs);反射获得方法参数 进入invokeForRequest()方法
 来到org.springframework.web.method.support.InvocableHandlerMethod
 
     @Nullable
@@ -598,8 +545,7 @@ Object[] args = getMethodArgumentValues(request, mavContainer, providedArgs);
         }
     }
 
-![img_8.png](img_8.png) 以上的源码分析都是Spring4的源码和Spring5的源码相同
-下面解析的过程看的是Spring4的源码解析，和Spring5的源码大不一样
+![img_8.png](img_8.png) 以上的源码分析都是Spring4的源码和Spring5的源码相同 下面解析的过程看的是Spring4的源码解析，和Spring5的源码大不一样
 
 
     

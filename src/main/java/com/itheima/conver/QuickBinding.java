@@ -18,7 +18,7 @@ public class QuickBinding {
      **/
 
     @RequestMapping("/emp/convertor")
-    public void quickConvertor(@RequestParam("dataString") Employee employee){
+    public void quickConvertor(@RequestParam("dataString") Employee employee) {
         System.out.println(employee);
     }
 }

@@ -13,9 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class NullPointerError {
 
     @RequestMapping("/err/page")
-    public String getNullPointer(){
+    public String getNullPointer() {
         String attr = null;
-        if(attr.equals("admin")){
+        if (attr.equals("admin")) {
             return "success";
         }
         return null;

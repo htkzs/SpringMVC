@@ -1,6 +1,7 @@
 package com.itheima.handler;
 
 
+import com.itheima.entity.Book;
 import com.itheima.entity.Employee;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -22,10 +23,11 @@ public class RequestBodyHandler {
      * @return java.lang.String
      **/
     @RequestMapping("/testRequestBody")
-    public String testRequestBody(@RequestBody String body){
-        System.out.println("接受到POST请求的请求体为："+body);
+    public String testRequestBody(@RequestBody String body) {
+        System.out.println("接受到POST请求的请求体为：" + body);
         return "success";
     }
+
     /*
      * @Author GhostGalaxy
      * @Description 测试接收一个JSON字符串 放到对象中
@@ -34,10 +36,11 @@ public class RequestBodyHandler {
      * @return java.lang.String
      **/
     @RequestMapping("/testRequestBody01")
-    public String testRequestBody01(@RequestBody Employee employee){
-        System.out.println("接受到POST请求的请求体为："+employee);
+    public String testRequestBody01(@RequestBody Employee employee) {
+        System.out.println("接受到POST请求的请求体为：" + employee);
         return "success";
     }
+
     /*
      * @Author GhostGalaxy
      * @Description 得到整个请求头的信息 测试地址：http://localhost:8080/springmvc/testHttpEntity
@@ -48,10 +51,11 @@ public class RequestBodyHandler {
      * @return java.lang.String
      **/
     @RequestMapping("/testHttpEntity")
-    public String testHttpEntity(HttpEntity<String> httpEntity){
+    public String testHttpEntity(HttpEntity<String> httpEntity) {
         System.out.println(httpEntity);
         return "success";
     }
+
     /*
      * @Author GhostGalaxy
      * @Description 如果指定 @ResponseBody注解返回的字符串将会直接放到响应体中 不进行页面跳转 测试地址：http://localhost:8080/springmvc/testResponseBody
@@ -61,9 +65,10 @@ public class RequestBodyHandler {
      **/
     @ResponseBody
     @RequestMapping("/testResponseBody")
-    public String testResponseBody(){
+    public String testResponseBody() {
         return "success";
     }
+
     /*
      * @Author GhostGalaxy
      * @Description 定制响应体 测试地址：http://localhost:8080/springmvc/testResponseEntity
@@ -72,11 +77,11 @@ public class RequestBodyHandler {
      * @return org.springframework.http.ResponseEntity<java.lang.String>
      **/
     @RequestMapping("/testResponseEntity")
-    public ResponseEntity<String> testResponseEntity(){
+    public ResponseEntity<String> testResponseEntity() {
         HttpStatus statusCode;
-        String body="<h1>success</h1>";
-        MultiValueMap<String, String> headers=new HttpHeaders();
-        headers.add("set-cookie","username=韩梅梅");
+        String body = "<h1>success</h1>";
+        MultiValueMap<String, String> headers = new HttpHeaders();
+        headers.add("set-cookie", "username=韩梅梅");
         ResponseEntity<String> responseEntity = new ResponseEntity<>(body, headers, HttpStatus.OK);
         return responseEntity;
     }

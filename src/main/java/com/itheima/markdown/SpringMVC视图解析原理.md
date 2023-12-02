@@ -1,9 +1,6 @@
-视图解析原理：
-1、方法执行后的返回值会作为页面地址参考，转发或者重定向到页面
-2、视图解析器可能会进行页面地址的拼串﹔
+视图解析原理： 1、方法执行后的返回值会作为页面地址参考，转发或者重定向到页面 2、视图解析器可能会进行页面地址的拼串﹔
 
-1、任何方法的返回值，最终都会被包装成ModelAndView对象
-org.springframework.web.servlet.DispatcherServlet下：1040行返回视图方法
+1、任何方法的返回值，最终都会被包装成ModelAndView对象 org.springframework.web.servlet.DispatcherServlet下：1040行返回视图方法
 
 processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
 
@@ -49,8 +46,8 @@ processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchExc
 			mappedHandler.triggerAfterCompletion(request, response, null);
 		}
 	}
-视图渲染流程:将域中的数据在页面展示;
-4、View与ViewResolver; ViewResolver的作用是根据视图名（方法的返回值）得到View对象;
+
+视图渲染流程:将域中的数据在页面展示; 4、View与ViewResolver; ViewResolver的作用是根据视图名（方法的返回值）得到View对象;
 
     protected void render(ModelAndView mv, HttpServletRequest request, HttpServletResponse response) throws Exception {
     // Determine locale for request and apply it to the response.
@@ -161,8 +158,7 @@ processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchExc
 		});
 	}
 
-5、怎么能根据方法的返回值(视图名)得到View对象?
-org.springframework.web.servlet.DispatcherServlet下:
+5、怎么能根据方法的返回值(视图名)得到View对象? org.springframework.web.servlet.DispatcherServlet下:
 
     @Nullable
     protected View resolveViewName(String viewName, @Nullable Map<String, Object> model,
@@ -181,6 +177,7 @@ org.springframework.web.servlet.DispatcherServlet下:
 		}
 		return null;
 	}
+
 resolveViewName(viewName, locale);详解
 
     @Nullable
@@ -212,8 +209,8 @@ resolveViewName(viewName, locale);详解
             return view != UNRESOLVED_VIEW ? view : null;
         }
     }
-createView(viewName, locale);详解
-org.springframework.web.servlet.view.UrlBasedViewResolver
+
+createView(viewName, locale);详解 org.springframework.web.servlet.view.UrlBasedViewResolver
 
     @Override
     protected View createView(String viewName, Locale locale) throws Exception {
@@ -249,8 +246,7 @@ org.springframework.web.servlet.view.UrlBasedViewResolver
 		return super.createView(viewName, locale);
 	}
 
-super.createView(viewName, locale); 由于测试时并没有 forward或者redirect前缀就会调用父类方法
-super.createView(viewName, locale); 详解
+super.createView(viewName, locale); 由于测试时并没有 forward或者redirect前缀就会调用父类方法 super.createView(viewName, locale); 详解
 org.springframework.web.servlet.view.UrlBasedViewResolver
 
     protected AbstractUrlBasedView buildView(String viewName) throws Exception {
@@ -286,30 +282,26 @@ org.springframework.web.servlet.view.UrlBasedViewResolver
 		return view;
 	}
 
-最终返回一个 AbstractUrlBasedView  实际是一个InternalResourceView
+最终返回一个 AbstractUrlBasedView 实际是一个InternalResourceView
 ![img_4.png](img_4.png)
 
-总结：视图解析器只是为了得到视图对象﹔视图对象才能真正的转发（将模型数据全部放在请求域中）或者重定向到页面
-视图对象才能真正的渲染视图；
+总结：视图解析器只是为了得到视图对象﹔视图对象才能真正的转发（将模型数据全部放在请求域中）或者重定向到页面 视图对象才能真正的渲染视图；
 
-总结：方法无论如何执行都会有一个ModelAndView返回值，视图解析器根据ModelAndView中的视图名称得到视图对象，视图对象将视图中的ModelView中的数据Model
-进行渲染，数据放入请求域中。
+总结：方法无论如何执行都会有一个ModelAndView返回值，视图解析器根据ModelAndView中的视图名称得到视图对象，视图对象将视图中的ModelView中的数据Model 进行渲染，数据放入请求域中。
 ![img_10.png](img_10.png)
 ![img_11.png](img_11.png)
 ![img_12.png](img_12.png)
 
-视图和视图解析器
-请求处理方法执行完成后,最终返回一个ModelAndView对象。对于那些返回String , View或 ModeMap 等类型的处理方法，Spring MVC也会在内部捋它们装配成一个ModelAndView对象，它包合了逻辑名和模型对象的视图Spring MVC借助视图解析器(ViewResolver )得到最终的视图对象(View),最终的视图可以是JSP，也可能是Excel、JFreeChart等各种表现形式的视图
-对于最终究竟采取何种视图对象对模型数据进行渲染,处理器并不关心,处理器工作重点聚焦在生产模型数据的工作上，从而实现 MVC的充分解耦
-
+视图和视图解析器 请求处理方法执行完成后,最终返回一个ModelAndView对象。对于那些返回String , View或 ModeMap 等类型的处理方法，Spring
+MVC也会在内部捋它们装配成一个ModelAndView对象，它包合了逻辑名和模型对象的视图Spring MVC借助视图解析器(ViewResolver )得到最终的视图对象(View)
+,最终的视图可以是JSP，也可能是Excel、JFreeChart等各种表现形式的视图 对于最终究竟采取何种视图对象对模型数据进行渲染,处理器并不关心,处理器工作重点聚焦在生产模型数据的工作上，从而实现 MVC的充分解耦
 
 JSTLView的使用：
 <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver" id="viewResolver">
-    <property name="prefix" value="/WEB-INF/pages/"/>
-    <property name="suffix" value=".jsp"/>
-    <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+<property name="prefix" value="/WEB-INF/pages/"/>
+<property name="suffix" value=".jsp"/>
+<property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
 </bean>
-
 
 自定义视图解析器：
 

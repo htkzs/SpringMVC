@@ -7,8 +7,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 @Controller
 @RequestMapping("/Hello")
 public class HelloSpringController {
-    @RequestMapping(value = "/index",method = RequestMethod.GET,headers = {"User-Agent= "})
-    public String index(){
+    @RequestMapping(value = "/index", method = RequestMethod.GET, headers = {"User-Agent= "})
+    public String index() {
         return "success";
     }
 }

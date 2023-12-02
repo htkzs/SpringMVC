@@ -14,11 +14,12 @@ public class RestRequestController {
      * @Param []
      * @return java.lang.String
      **/
-    @RequestMapping(value="/book/{bookId}",method = RequestMethod.POST)
-    public String addBook(@PathVariable("bookId") String bookId){
-        System.out.println("成功添加一本图书"+bookId);
+    @RequestMapping(value = "/book/{bookId}", method = RequestMethod.POST)
+    public String addBook(@PathVariable("bookId") String bookId) {
+        System.out.println("成功添加一本图书" + bookId);
         return "success";
     }
+
     /*
      * @Author GhostGalaxy
      * @Description 删除一本图书
@@ -26,11 +27,12 @@ public class RestRequestController {
      * @Param []
      * @return java.lang.String
      **/
-    @RequestMapping(value = "/book/{bookId}",method = RequestMethod.DELETE)
-    public String deleteBook(@PathVariable("bookId") String bookId){
-        System.out.println("成功删除一本图书"+bookId);
+    @RequestMapping(value = "/book/{bookId}", method = RequestMethod.DELETE)
+    public String deleteBook(@PathVariable("bookId") String bookId) {
+        System.out.println("成功删除一本图书" + bookId);
         return "success";
     }
+
     /*
      * @Author GhostGalaxy
      * @Description 修改一本图书
@@ -38,21 +40,22 @@ public class RestRequestController {
      * @Param
      * @return
      **/
-    @RequestMapping(value = "/book/{bookId}",method = RequestMethod.PUT)
-    public String updateBook(@PathVariable("bookId") String bookId){
-        System.out.println("成功修改一本图书"+bookId);
+    @RequestMapping(value = "/book/{bookId}", method = RequestMethod.PUT)
+    public String updateBook(@PathVariable("bookId") String bookId) {
+        System.out.println("成功修改一本图书" + bookId);
         return "success";
     }
-   /*
-    * @Author GhostGalaxy
-    * @Description 查询
-    * @Date 17:19:34 2022/11/27
-    * @Param []
-    * @return java.lang.String
-    **/
-    @RequestMapping(value = "/book/{bookId}",method = RequestMethod.GET)
-    public String queryBook(@PathVariable("bookId") String bookId){
-        System.out.println("成功查询一本图书"+bookId);
+
+    /*
+     * @Author GhostGalaxy
+     * @Description 查询
+     * @Date 17:19:34 2022/11/27
+     * @Param []
+     * @return java.lang.String
+     **/
+    @RequestMapping(value = "/book/{bookId}", method = RequestMethod.GET)
+    public String queryBook(@PathVariable("bookId") String bookId) {
+        System.out.println("成功查询一本图书" + bookId);
         return "success";
     }
 }

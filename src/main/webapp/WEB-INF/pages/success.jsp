@@ -13,7 +13,23 @@
 <%
     System.out.println("来到目标页面success.jsp");
 %>
-<body>
-   success
+<br>
+success request</br>
+pageContext:${pageScope.msg}</br>
+requestScope:${requestScope.msg}</br>
+sessionScope:${sessionScope.msg}</br>
+applicationContextScope:${applicationScope.msg}</br>
+
+pageContext:${pageScope.message}</br>
+requestScope:${requestScope.message}</br>
+sessionScope:${sessionScope.message}</br>
+applicationContextScope:${applicationScope.message}</br>
+
+
+pageContext:${pageScope.subject}</br>
+requestScope:${requestScope.subject}</br>
+sessionScope:${sessionScope.subject}</br>
+applicationContextScope:${applicationScope.subject}</br>
+
 </body>
 </html>

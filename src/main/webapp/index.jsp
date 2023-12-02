@@ -9,7 +9,7 @@
 <%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <html>
 <%
-    pageContext.setAttribute("cpt",request.getContextPath());
+    pageContext.setAttribute("cpt", request.getContextPath());
 %>
 <head>
     <title>Title</title>
@@ -66,13 +66,13 @@
 <script type="text/javascript">
     $("#ajaxButton").click(function () {
         $.ajax({
-            url:"getAll/employees",
-            type:"GET",
-            success:function (data) {
-               console.log(data)
-                $.each(data,function (){
-                    var empInfo=this.lastName+"--->"+this.birth+"--->"+this.gender;
-                    $("div").append(empInfo+"<br/>");
+            url: "getAll/employees",
+            type: "GET",
+            success: function (data) {
+                console.log(data) //打印到浏览器的控制台
+                $.each(data, function () {
+                    var empInfo = this.lastName + "--->" + this.birth + "--->" + this.gender;
+                    $("div").append(empInfo + "<br/>");
                 });
             }
         });

@@ -230,8 +230,8 @@ public class HiddenHttpMethodFilter extends OncePerRequestFilter {
         1.SpringMVC通过在方法上传入原生的request和session外还能怎么样把数据带给页面
         2.可以在方法处传入Map、或者Model或者ModelMap。这些参数里面保存的所有数据都会被放在request域中,在页面通过requestScope获取
           Map.Model,ModelMap:最终都是BindingAwareModelMap在工作;相当于给BindingAwareModelMap中保存的东西都会被放在请求域中;
-        3.ModelAndView：既包含视图信息(页面地址）也包含模型数据（给页面带的数据),而且数据是放在请求域中;
-          使用一个注解
+        3.ModelAndView：既包含视图信息(页面地址）也包含模型数据（给页面带的数据),而且数据是放在请求域request中;
+          使用一个注解将key放在session域中
           @sessionAttributes(只能标在类上)
           @sessionAttributes(value={"msg"}，types={String.class} ):  可以指定key或者指定保存的类型的数据
           给BindingAwareModelMap中保存的数据，同时给session中放一份;value指定保存数据时要给session中放的数据的key
@@ -240,10 +240,10 @@ public class HiddenHttpMethodFilter extends OncePerRequestFilter {
 
 
         servlet的四大作用域范围对象：
-        pageContext:
-        request:
-        session:
-        application:
+        pageContext: pageScope
+        request:     requestScope
+        session:     sessionScope
+        application: applicationScope
 
         @ModelAttribute拟解决的问题：
 
@@ -259,7 +259,7 @@ public class HiddenHttpMethodFilter extends OncePerRequestFilter {
            2.如果发生数据库的全字段更行，将可能导致不该修改的数据被修改为NULL
         @ModelAttribute解决的思想就是，提前从数据库获取到该条数据封装到对象中，然后前端字段如果传入值就覆盖，没有传值就和数据库原纪录保持一致，这样不会导致数据丢失。
 
-        1) .SpringMVC要封装请求参数的Book对象不应该是自己new出来的
+        1) SpringMVC要封装请求参数的Book对象不应该是自己new出来的
               而应该是{从数据库}中拿到的准备好的对象
         @ModelAttribute.
         方法位置:这个方法就会提前于目标方法先运行,

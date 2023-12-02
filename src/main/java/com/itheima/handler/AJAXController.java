@@ -14,6 +14,7 @@ import java.util.List;
 public class AJAXController {
     @Autowired
     private EmployeeDao employeeDao;
+
     /*
      * @Author GhostGalaxy
      * @Description 返回JSON格式的数据
@@ -23,10 +24,8 @@ public class AJAXController {
      **/
     @ResponseBody
     @RequestMapping("/getAll/employees")
-    public Collection<Employee> getAllEmpForAJAX(){
+    public Collection<Employee> getAllEmpForAJAX() {
         Collection<Employee> employees = employeeDao.getAll();
         return employees;
     }
-
-
 }

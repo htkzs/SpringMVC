@@ -16,10 +16,11 @@ public class AnnotationController {
      * @return java.lang.String
      **/
     @RequestMapping("/request")
-    public String requestParam(@RequestParam("userId") String userId){
-        System.out.println("获取到的参数userId值为"+userId);
+    public String requestParam(@RequestParam("userId") String userId) {
+        System.out.println("获取到的参数userId值为" + userId);
         return "success";
     }
+
     /*
      * @Author GhostGalaxy
      * @Description 获取请求头当中的属性 http://localhost:8080/header
@@ -29,10 +30,11 @@ public class AnnotationController {
      * @return java.lang.String
      **/
     @RequestMapping("/header")
-    public String requestHeader(@RequestHeader("User-Agent") String userAgent){
-        System.out.println("获取到请求头的参数userAgent值为"+userAgent);
+    public String requestHeader(@RequestHeader("User-Agent") String userAgent) {
+        System.out.println("获取到请求头的参数userAgent值为" + userAgent);
         return "success";
     }
+
     /*
      * @Author GhostGalaxy
      * @Description   获取JESSIONID的值 测试路径为 http://localhost:8080/cookie  原生javaWeb方式获取到的cookie是多个值，需要遍历
@@ -41,8 +43,8 @@ public class AnnotationController {
      * @return java.lang.String
      **/
     @RequestMapping("/cookie")
-    public String cookieRequest(@CookieValue(value="JSESSIONID",required = false) String JSESSIONID){
-        System.out.println("获取到请求头的参数userAgent值为"+JSESSIONID);
+    public String cookieRequest(@CookieValue(value = "JSESSIONID", required = false) String JSESSIONID) {
+        System.out.println("获取到请求头的参数sessionId的值为" + JSESSIONID);
         return "success";
     }
 }

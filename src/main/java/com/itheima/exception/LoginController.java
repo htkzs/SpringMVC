@@ -16,27 +16,28 @@ import org.springframework.web.servlet.ModelAndView;
 public class LoginController {
 
     @RequestMapping("/login")
-    public ModelAndView login(@RequestParam("username") String userName){
-        if("admin".equals(userName)){
+    public ModelAndView login(@RequestParam("username") String userName) {
+        if ("admin".equals(userName)) {
             System.out.println("登录成功");
             ModelAndView modelAndView = new ModelAndView("success");
             return modelAndView;
-        }else{
+        } else {
             System.out.println("登录失败");
             //将异常抛出给tomcat去处理
             throw new UserNameNotFindException();
         }
     }
-    /**
-    * @Param :
-    * @Description :  模拟一个HttpRequestMethodNotSupportException springMVC定义的异常 通过地址栏 http://localhost:8080/springmvc/request/exception
-     * 访问一个POST请求将产生HttpRequestMethodNotSupportException
-    * @Author : 20609
-    * @Date : 2022/12/12 17:03
-    */
 
-    @RequestMapping(value = "/request/exception",method = RequestMethod.POST)
-    public ModelAndView testHttpRequestMethodNotSupportException(){
+    /**
+     * @Param :
+     * @Description :  模拟一个HttpRequestMethodNotSupportException springMVC定义的异常 通过地址栏 http://localhost:8080/springmvc/request/exception
+     * 访问一个POST请求将产生HttpRequestMethodNotSupportException
+     * @Author : 20609
+     * @Date : 2022/12/12 17:03
+     */
+
+    @RequestMapping(value = "/request/exception", method = RequestMethod.POST)
+    public ModelAndView testHttpRequestMethodNotSupportException() {
         ModelAndView modelAndView = new ModelAndView("success");
         return modelAndView;
     }

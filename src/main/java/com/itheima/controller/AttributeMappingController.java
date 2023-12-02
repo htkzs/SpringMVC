@@ -2,7 +2,10 @@ package com.itheima.controller;
 
 import com.itheima.entity.Book;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
 public class AttributeMappingController {
@@ -13,8 +16,8 @@ public class AttributeMappingController {
      * @Param [book]
      * @return java.lang.String
      **/
-    @RequestMapping("/book")
-    public String getBook(Book book){
+    @RequestMapping(value = "/book",method = RequestMethod.POST)
+    public String getBook(Book book) {
         System.out.println(book);
         return "success";
     }

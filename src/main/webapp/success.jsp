@@ -11,7 +11,7 @@
     <title>Title</title>
 </head>
 <body>
-   <h3>hello SpringMVC</h3>
+<h3>hello SpringMVC</h3>
 </body>
-   file upload success!
+file upload success!
 </html>

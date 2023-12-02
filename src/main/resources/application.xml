@@ -4,62 +4,62 @@
        xmlns:context="http://www.springframework.org/schema/context"
        xmlns:mvc="http://www.springframework.org/schema/mvc"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/mvc https://www.springframework.org/schema/mvc/spring-mvc.xsd">
-       <context:component-scan base-package="com.itheima"/>
+    <context:component-scan base-package="com.itheima"/>
 
-       <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver" id="viewResolver">
-              <property name="prefix" value="/WEB-INF/pages/"/>
-              <property name="suffix" value=".jsp"/>
-              <!--快速实现国际化功能使用JSTLView-->
-<!--              <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>-->
-       </bean>
-       <!--增加一个自定义的类型转换器-->
+    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver" id="viewResolver">
+        <property name="prefix" value="/WEB-INF/pages/"/>
+        <property name="suffix" value=".jsp"/>
+        <!--快速实现国际化功能使用JSTLView-->
+        <!--              <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>-->
+    </bean>
+    <!--增加一个自定义的类型转换器-->
 
-       <!--让SpringMVC管理国际化资源文件；配置一个资源文件管理器-->
-<!--       <bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">-->
-<!--              &lt;!&ndash;basename指定基础名&ndash;&gt;-->
-<!--              <property name="basename" value="i18n"/>-->
-<!--       </bean>-->
-       <!--会走视图解析器InternalResourceViewResolver 所以使用是需要和视图解析器同时使用-->
-       <mvc:view-controller path="/ToLoginPage" view-name="login"/>
-       <!--ConversionServiceFactoryBean帮助返回一个ConversionService-->
-       <bean id="conversionService" class="org.springframework.context.support.ConversionServiceFactoryBean">
-              <property name="converters">
-                     <set>
-                            <bean class="com.itheima.conver.MyStringToEmployeeConverter"/>
-                     </set>
-              </property>
-       </bean>
-       <!--静态资源直接交给tomcat处理-->
-       <mvc:default-servlet-handler/>
+    <!--让SpringMVC管理国际化资源文件；配置一个资源文件管理器-->
+    <!--       <bean id="messageSource" class="org.springframework.context.support.ResourceBundleMessageSource">-->
+    <!--              &lt;!&ndash;basename指定基础名&ndash;&gt;-->
+    <!--              <property name="basename" value="i18n"/>-->
+    <!--       </bean>-->
+    <!--会走视图解析器InternalResourceViewResolver 所以使用是需要和视图解析器同时使用-->
+    <mvc:view-controller path="/ToLoginPage" view-name="login"/>
+    <!--ConversionServiceFactoryBean帮助返回一个ConversionService-->
+    <bean id="conversionService" class="org.springframework.context.support.ConversionServiceFactoryBean">
+        <property name="converters">
+            <set>
+                <bean class="com.itheima.conver.MyStringToEmployeeConverter"/>
+            </set>
+        </property>
+    </bean>
+    <!--静态资源直接交给tomcat处理-->
+    <mvc:default-servlet-handler/>
 
-       <!--配置文件上传解析器-->
-       <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
-              <property name="maxUploadSize" value="#{1024*1024*20}"/>
-              <property name="defaultEncoding" value="utf-8"/>
-       </bean>
+    <!--配置文件上传解析器-->
+    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <property name="maxUploadSize" value="#{1024*1024*20}"/>
+        <property name="defaultEncoding" value="utf-8"/>
+    </bean>
 
-       <!--配置interceptor-->
-       <mvc:interceptors>
-              <!--该拦截器是拦截所有的请求-->
-              <bean class="com.itheima.interceptor.MyInterceptor"/>
-              <mvc:interceptor>
-                     <!--配置拦截具体的请求-->
-                     <mvc:mapping path="/hello/interceptor"/>
-                     <bean class="com.itheima.interceptor.MySecondInterceptor"/>
-              </mvc:interceptor>
-       </mvc:interceptors>
+    <!--配置interceptor-->
+    <mvc:interceptors>
+        <!--该拦截器是拦截所有的请求-->
+        <bean class="com.itheima.interceptor.MyInterceptor"/>
+        <mvc:interceptor>
+            <!--配置拦截具体的请求-->
+            <mvc:mapping path="/hello/interceptor"/>
+            <bean class="com.itheima.interceptor.MySecondInterceptor"/>
+        </mvc:interceptor>
+    </mvc:interceptors>
 
-       <!--配置异常处理的解析器-->
-       <bean class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver" id="exceptionResolver">
-              <property name="exceptionMappings">
-                     <props>
-                            <prop key="java.lang.NullPointerException">error</prop>
-                     </props>
-              </property>
-              <!--设置返回异常的隐含模型的key public static final String DEFAULT_EXCEPTION_ATTRIBUTE = "exception"; 默认为exception-->
-              <property name="exceptionAttribute" value="ex"/>
-       </bean>
+    <!--配置异常处理的解析器-->
+    <bean class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver" id="exceptionResolver">
+        <property name="exceptionMappings">
+            <props>
+                <prop key="java.lang.NullPointerException">error</prop>
+            </props>
+        </property>
+        <!--设置返回异常的隐含模型的key public static final String DEFAULT_EXCEPTION_ATTRIBUTE = "exception"; 默认为exception-->
+        <property name="exceptionAttribute" value="ex"/>
+    </bean>
 
-       <!--开启注解驱动-->
-       <mvc:annotation-driven conversion-service="conversionService"/>
+    <!--开启注解驱动-->
+    <mvc:annotation-driven conversion-service="conversionService"/>
 </beans>

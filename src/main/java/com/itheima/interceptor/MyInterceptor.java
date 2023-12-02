@@ -24,11 +24,13 @@ public class MyInterceptor implements HandlerInterceptor {
         System.out.println("MyInterceptor的preHandle执行");
         return true;
     }
+
     //目标方法刚执行完成就执行
     @Override
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
         System.out.println("MyInterceptor的postHandle执行");
     }
+
     //页面返回后执行
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {

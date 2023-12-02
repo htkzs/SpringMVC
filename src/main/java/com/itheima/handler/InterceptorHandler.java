@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Controller
 public class InterceptorHandler {
     @RequestMapping("/hello/interceptor")
-    public String testInterceptor(){
+    public String testInterceptor() {
         System.out.println("目标方法执行了......");
         return "success";
     }

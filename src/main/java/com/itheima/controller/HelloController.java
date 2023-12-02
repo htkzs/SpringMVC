@@ -11,8 +11,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class HelloController {
     @Autowired
     private HelloService helloService;
+
     @RequestMapping("/hello")
-    public String sayHello(){
+    public String sayHello() {
         String result = helloService.syaHello();
         return result;
     }

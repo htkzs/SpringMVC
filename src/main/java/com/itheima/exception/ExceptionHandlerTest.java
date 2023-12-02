@@ -15,29 +15,30 @@ import org.springframework.web.servlet.ModelAndView;
 @Controller
 public class ExceptionHandlerTest {
     /**
-    * @Param :
-    * @Description :  演示异常的发生 测试的URL http://localhost:8080/springmvc/exception?index=0
-    * @Author : 20609
-    * @Date : 2022/12/12 16:00
-    */
+     * @Param :
+     * @Description :  演示异常的发生 测试的URL http://localhost:8080/springmvc/exception?index=0
+     * @Author : 20609
+     * @Date : 2022/12/12 16:00
+     */
 
     @RequestMapping("/exception")
-    public String showException(@RequestParam("index") Integer index){
+    public String showException(@RequestParam("index") Integer index) {
         //发生异常时被异常方法捕捉后进行处理
-        int i = 10/index;
+        int i = 10 / index;
         return "success";
     }
+
     /**
-    * @Param :
-    * @Description :  当发生数学异常时 @ExceptionHandler标注的方法只限于处理本类发生的异常
-    * @Author : 20609
-    * @Date : 2022/12/12 16:06
-    */
+     * @Param :
+     * @Description :  当发生数学异常时 @ExceptionHandler标注的方法只限于处理本类发生的异常
+     * @Author : 20609
+     * @Date : 2022/12/12 16:06
+     */
 
     @ExceptionHandler({ArithmeticException.class})
-    public ModelAndView exceptionHandler(Exception exception){
+    public ModelAndView exceptionHandler(Exception exception) {
         ModelAndView modelAndView = new ModelAndView("error");
-        modelAndView.addObject("ex",exception);
+        modelAndView.addObject("ex", exception);
         //视图解析器会拼串
         return modelAndView;
 
