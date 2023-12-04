@@ -200,7 +200,8 @@ DispatcherServlet中有几个引用类型的属性;SpringMVC的九大组件;spri
 
 这九大组件的是在何时初始化的呢？ 在org.springframework.web.servlet.DispatcherServlet中:
 
-    //spring源码中有这个方法onRefresh(),九大组件的初始化是在SpringIOC启动的时候
+    //spring源码中有这个方法onRefresh(),九大组件的初始化是在SpringIOC启动的时候，即服务器启动时。
+    //有的组件是根据id找的，有些组件是根据type找的，如果没有找到，dispatcher会默认给各个组件赋一个初始值。这里就给用户提供了扩展点
 
     @Override
     protected void onRefresh(ApplicationContext context) {
@@ -380,6 +381,19 @@ ha.handle(processedRequest, response, mappedHandler.getHandler());
 		}
 		else {
 			// No synchronization on session demanded at all...
+            //执行目标方法 
+             1.确定要要执行的方法 获取类的方法解析器，方法解析器根据请求地址确认那个方法可以执行，根据方法解析器得到一个方法执行器，通过方法执行器反射执行目标方法。
+先判断是否标注sessionAttribute（如果标注了就放在隐含模型中），找到modelAttribute标注的方法，反射执行该方法（确定参数，先拿到阐述，再拿到注解，有注解就解析保存）
+确定参数的步骤：
+没有标注注解的参数
+  1.首先确定是不是原生参数
+  2.确定是不是Model和Map旗下的参数，如果有，将隐含模型赋值给它。
+标注@ModelAttribute注解的方法：
+  1.将用户程序执行的结果放入到ModelAttribute中
+  2.
+3. 标注其它注解的方法
+   
+           
 			mav = invokeHandlerMethod(request, response, handlerMethod);
 		}
 
@@ -443,7 +457,7 @@ ha.handle(processedRequest, response, mappedHandler.getHandler());
 				});
 				invocableMethod = invocableMethod.wrapConcurrentResult(result);
 			}
-            //执行目标方法
+            //真正执行目标方法 确定参数值 提前@ModelAttribute 
 			invocableMethod.invokeAndHandle(webRequest, mavContainer);
 			if (asyncManager.isConcurrentHandlingStarted()) {
 				return null;

@@ -50,5 +50,5 @@ i18n_zh_CN.properties
 
           缺点是其它请求将失效
           此时需要开启注解驱动
-           <mvc:annotation-driven/>
+          <mvc:annotation-driven/>
 

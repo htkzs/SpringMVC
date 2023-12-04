@@ -14,7 +14,7 @@ public class RouterHandler {
     @RequestMapping("/handle")
     public String forwardSuccess() {
         /*
-        这里的 / 表示是当前工程 必须写上否则容易报错。
+        这里的 / 表示是当前工程 必须写上否则容易报错。/相对路径是webapp
         注意使用了forward就不会在走视图解析器了 直接会在当前工程的根目录下去查找。 请求转发访问的地址栏不会改变
          */
         return "forward:/success.jsp";
@@ -32,14 +32,14 @@ public class RouterHandler {
 
     /**
      * @Param :
-     * @Description :  先走视图解析器，然后进行目录回退。
+     * @Description :  先走视图解析器，然后进行目录回退。 拼串 /WEB-INF/pages/success.jsp
      * @Author : 20609
      * @Date : 2022/11/28 17:52
      */
 
     @RequestMapping("/handle03")
     public String forwardSuccess01() {
-        return "../../success.jsp";
+        return "../../success";
     }
 
     /**

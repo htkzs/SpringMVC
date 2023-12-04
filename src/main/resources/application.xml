@@ -41,7 +41,7 @@
     <!--配置interceptor-->
     <mvc:interceptors>
         <!--该拦截器是拦截所有的请求-->
-        <bean class="com.itheima.interceptor.MyInterceptor"/>
+        <!--<bean class="com.itheima.interceptor.MyInterceptor"/>-->
         <mvc:interceptor>
             <!--配置拦截具体的请求-->
             <mvc:mapping path="/hello/interceptor"/>
